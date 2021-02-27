@@ -1,0 +1,33 @@
+{
+  "name": "werk-backend",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">\r <a href=\"https://dscvit.com\">\r \t<img src=\"https://user-images.githubusercontent.com/30529572/92081025-fabe6f00-edb1-11ea-9169-4a8a61a5dd45.png\" alt=\"DSC VIT\"/>\r </a>\r \t<h2 align=\"center\"> < Insert Project Title Here > </h2>\r \t<h4 align=\"center\"> < Insert Project Description Here > <h4>\r </p>",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vishal-1408/werk-backend.git"
+  },
+  "author": "vishal",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vishal-1408/werk-backend/issues"
+  },
+  "homepage": "https://github.com/vishal-1408/werk-backend#readme",
+  "dependencies": {
+    "bcrypt": "^5.0.1",
+    "body-parser": "^1.19.0",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "google-auth-library": "^7.0.2",
+    "helmet": "^4.4.1",
+    "http-status-codes": "^2.1.4",
+    "jsonwebtoken": "^8.5.1",
+    "morgan": "^1.10.0",
+    "mysql": "^2.18.1",
+    "nodemailer": "^6.5.0",
+    "otp-generator": "^2.0.0"
+  }
+}
