@@ -5,6 +5,8 @@ const morgan = require("morgan");
 // const expressRL = require("express-rate-limiter");
 const dotenv = require("dotenv");
 const helmet = require("helmet");
+const authRoutes = require("./api/routes/auth")
+
 dotenv.config();
 
 
@@ -35,13 +37,13 @@ app.use((req, res, next) => {
 
 
 
-
-
 //ROUTES
-
+app.use("/auth",authRoutes);
 
 app.use("/*",(req,res)=>{
-    res.status(StatusCodes.NOT_FOUND).json();
+    res.status(404).json({
+      error:"page not found!!"
+    });
 
 })
 

@@ -2,7 +2,7 @@
 <a href="https://dscvit.com">
 	<img src="https://user-images.githubusercontent.com/30529572/92081025-fabe6f00-edb1-11ea-9169-4a8a61a5dd45.png" alt="DSC VIT"/>
 </a>
-	<h2 align="center"> < Insert Project Title Here > </h2>
+	<h2 align="center"> WERK BACKEND </h2>
 	<h4 align="center"> < Insert Project Description Here > <h4>
 </p>
 
@@ -46,7 +46,7 @@
 <table>
 	<tr align="center">
 		<td>
-		John Doe
+		Vishal
 		<p align="center">
 			<img src = "https://dscvit.com/images/dsc-logo-square.svg" width="150" height="150" alt="Your Name Here (Insert Your Image Link In Src">
 		</p>
