@@ -45,14 +45,15 @@ exports.createSession = async (req,res)=>{
                     tables:'participants',
                     data:{
                         s_id:session.insertId,
-                        userId:p.userId
+                        userId:p.userId,
+                        joined:i==0?1:0
                     }
                 })
                 if(i!==0) await sendAccessCode(accessCode,p.email,req.user.name)
             })
            
            res.status(200).json({
-               session:data
+               session:{sessionId:session.insertId,...data}
            })
 
 
@@ -83,9 +84,9 @@ exports.joinSession = async (req,res)=>{
             const { accessCode} = req.body;
             
             const session = await getOne(connection,{
-                tables:'sessions',
-                fields:'s_id',
-                conditions:'accessCode=?',
+                tables:'(select * from sessions where accessCode=?) as userSessions inner join users',
+                fields:'s_id,startTime,endTime,createdBy,users.name as creator_name, users.email as creator_email ',
+                conditions:'userSessions.createdBy=users.userId',
                 values:[accessCode]
             })
             console.log(session)
@@ -107,7 +108,7 @@ exports.joinSession = async (req,res)=>{
                 values:[1,participant[0].id]
             })
            res.status(200).json({
-               message:'successfully joined'
+               session:session[0]
            })
 
 
@@ -134,11 +135,11 @@ exports.getSessions = async(req,res)=>{
         const connection = await getConn(pool);
         try {
             const sessions = await getOne(connection,{
-                tables:`(select s_id,startTime,endTime,accessCode,createdAt,noOfParticipants,createdBy 
-                    from (select s_id,count(id) as noOfParticipants from participants 
-                    where s_id in (select s_id from participants where userId=?) group by s_id) as p
+                tables:`(select s_id,startTime,endTime,accessCode,createdAt,noOfParticipantsJoined,createdBy 
+                    from (select s_id,count(id) as noOfParticipantsJoined from participants 
+                    where s_id in (select s_id from participants where userId=? and joined=1 ) and participants.joined=1 group by s_id) as p
                      natural join sessions) as userSessions inner join users`,
-                fields:'s_id as sessionId,startTime,endTime,accessCode,createdAt,noOfParticipants,users.name as creator_name,users.email as creator_email ',
+                fields:'userSessions.*,users.name as creator_name,users.email as creator_email ',
                 conditions:'userSessions.createdBy=users.userId',
                 values:[req.user.userId]
             })
@@ -171,7 +172,7 @@ exports.getParticipants = async(req,res)=>{
             const s_id = req.params.id;
             const users = await getOne(connection,{
                 tables:'(select * from participants where s_id=?) as p natural join users order by points desc',
-                fields:'userId,name,email,points',
+                fields:'userId,name,email,points,joined',
                 conditions:'',
                 values:[s_id]
             })
@@ -196,5 +197,9 @@ exports.getParticipants = async(req,res)=>{
         }
     }
 }
+
+
+
+
 
 

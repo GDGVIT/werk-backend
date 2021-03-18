@@ -41,9 +41,7 @@ exports.googleAuth = async (req, res) => {
             }
 
             const token = generateToken({
-                userId: searchedUser[0].userId,
-                name: searchedUser[0].name,
-                email: searchedUser[0].email,
+                userId: searchedUser[0].userId
             });
 
             return res.status(200).json({
@@ -105,9 +103,7 @@ exports.register = async (req, res) => {
             });
 
             const token = generateToken({
-                name,
-                email,
-                userId: result.insertId,
+                userId: result.insertId
             });
 
             // const info = await sendEmail(connection, email);
@@ -164,9 +160,7 @@ exports.login = async (req, res) => {
             if(!check) throw new Unauthorized("Password is incorrect!");
 
             const token = generateToken({
-                userId: searchedUser[0].userId,
-                name: searchedUser[0].name,
-                email: searchedUser[0].email,
+                userId: searchedUser[0].userId
             });
 
             res.status(200).json({

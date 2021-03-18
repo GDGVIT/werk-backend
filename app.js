@@ -7,6 +7,10 @@ const dotenv = require("dotenv");
 const helmet = require("helmet");
 const authRoutes = require("./api/routes/auth");
 const sessionRoutes = require("./api/routes/session");
+const socketIo = require('socket.io');
+const { getOne, getConn, insertOne } = require("./db");
+const pool = require("./config/db");
+const { verifyToken } = require("./api/utils");
 
 dotenv.config();
 
@@ -55,3 +59,80 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT,()=>{
   console.log("SERVER RUNNING AT PORT: "+PORT);
 })
+
+const io = socketIo(server);
+
+
+io.on("connection",async (socket)=>{
+  console.log("conncted!")
+  try{
+    const connection = await getConn(pool);
+  try{
+   socket.on("initialize",async(data)=>{
+     if(!data.token) throw new Error("token not passed");
+     let user = verifyToken(data.token);
+     socket.on("joinSession",async (data)=>{
+      //data contains sessionID
+      console.log(user);
+      if(!data.session) throw new Error("sessionId or token not passed")
+      const result = await getOne(connection,{
+        tables:'participants',
+        fields:'s_id',
+        conditions:'userId=? and s_id=? and joined=1',
+        values:[user.userId,data.session]
+ 
+      })
+      if(result.length==0) throw new Error("User is not in that session");
+      let room = `session-${result[0].s_id}`
+      socket.join(room)
+
+      const messages = await getOne(connection,{
+        tables:'groupchats',
+        fields:'*',
+        conditions:'sent_in=? order by sentTime asc',
+        values:[result[0].s_id]
+      })
+
+      messages = messages.map(m=>{
+        return {
+          ...m,
+          sender:m.sentBy===user.userId? true : false
+        }
+      })
+
+      socket.emit('oldmessages',(messages));
+
+      socket.on('message',async (messageData)=>{
+           //message data contains
+           console.log(user);
+          socket.to(room).emit('message',messageData);
+          await insertOne(connection,{
+            tables:'groupchats',
+            data:{
+              message:messageData.message,
+              sentBy:user.userId,
+              sentIn:result[0].s_id
+            }
+          })
+      })
+
+      socket.on('disconnect',()=>{
+        socket.leave(room);
+      })
+   })
+   
+   })
+  }finally{
+    pool.releaseConnection(connection);
+  }
+}catch(e){
+  if(e){
+    console.log(e);
+    socket.disconnect(true)
+  }
+}
+
+})
+
+
+
