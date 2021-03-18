@@ -2,9 +2,10 @@
   "name": "werk-backend",
   "version": "1.0.0",
   "description": "<p align=\"center\">\r <a href=\"https://dscvit.com\">\r \t<img src=\"https://user-images.githubusercontent.com/30529572/92081025-fabe6f00-edb1-11ea-9169-4a8a61a5dd45.png\" alt=\"DSC VIT\"/>\r </a>\r \t<h2 align=\"center\"> < Insert Project Title Here > </h2>\r \t<h4 align=\"center\"> < Insert Project Description Here > <h4>\r </p>",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
   },
   "repository": {
     "type": "git",
