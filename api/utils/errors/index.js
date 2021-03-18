@@ -1,6 +1,6 @@
 const BadRequest = require("./BadRequest");
 const InternalServerError = require("./InternalServerError");
-const Unauthorized = require("./Unauthorized.js");
+const Unauthorized = require("./Unauthorized");
 // const BadRequest = require("./SQ")
 // const BadRequest = require("./BadRequest")
 

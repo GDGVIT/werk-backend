@@ -1,5 +1,5 @@
 const pool = require("../../config/db");
-const { BadRequest, InternalServerError, Unauthorized } = require("../utils/Errors");
+const { BadRequest, InternalServerError, Unauthorized } = require("../utils/errors");
 const { sendAccessCode } = require("../utils/email");
 const { getOne, getConn,updateOne,insertOne } = require("../../db");
 const { generateToken, hashIt, verifyHash,verifyAccessToken } = require("../utils");

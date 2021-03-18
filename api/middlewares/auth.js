@@ -1,4 +1,4 @@
-const { BadRequest, InternalServerError, Unauthorized } = require("../utils/Errors");
+const { BadRequest, InternalServerError, Unauthorized } = require("../utils/errors");
 const pool = require("../../config/db");
 const { getConn, getOne } = require("../../db");
 const { verifyToken } = require("../utils");
