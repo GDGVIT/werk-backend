@@ -5,7 +5,8 @@ const morgan = require("morgan");
 // const expressRL = require("express-rate-limiter");
 const dotenv = require("dotenv");
 const helmet = require("helmet");
-const authRoutes = require("./api/routes/auth")
+const authRoutes = require("./api/routes/auth");
+const sessionRoutes = require("./api/routes/session");
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use((req, res, next) => {
 
 //ROUTES
 app.use("/auth",authRoutes);
+app.use("/session",sessionRoutes);
 
 app.use("/*",(req,res)=>{
     res.status(404).json({
@@ -49,7 +51,7 @@ app.use("/*",(req,res)=>{
 
 
 //SERVER
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT,()=>{
   console.log("SERVER RUNNING AT PORT: "+PORT);
 })

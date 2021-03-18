@@ -17,10 +17,7 @@ exports.generateToken = (user)=>{
 
 
 exports.verifyToken = (token)=>{
-    jwt.verify(token,process.env.JWT_SECRET,(error,token)=>{
-      if(error) throw new InternalServerError(e.message);
-      return token
-    });
+    return jwt.verify(token,process.env.JWT_SECRET)
 
 }
 
@@ -31,6 +28,7 @@ exports.hashIt = (password)=>{
 }
 
 exports.verifyHash = (password,hash)=>{
+
   return bcrypt.compare(password,hash);
 
 }

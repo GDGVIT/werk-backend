@@ -1,6 +1,6 @@
 const pool = require("../../config/db");
 const { BadRequest, InternalServerError, Unauthorized } = require("../utils/Errors");
-const { sendEmail } = require("../utils/email");
+const { sendOTP } = require("../utils/email");
 const { getOne, getConn,updateOne,insertOne } = require("../../db");
 const { generateToken, hashIt, verifyHash,verifyAccessToken } = require("../utils");
 require("dotenv").config()
@@ -24,38 +24,20 @@ exports.googleAuth = async (req, res) => {
                 fields: `userId, email, name, avatar`,
                 tables: `users`,
                 conditions: `email=?`,
-                values: [user.email],
+                values: [email],
             });
 
             if (!seachedUser.length) {
                 if (!picture) picture = process.env.DEFAULT_AVATAR;
 
                 const result = await insertOne(connection, {
-                    tables: `users(name,avatar,email)`,
-                    questions: `(?,?,?,?)`,
-                    values: [name, picture, email,1],
+                    tables: 'users',
+                    data: {name,avatar:picture,email,emailVerified:1}
                 });
-
+                searchedUser[0].userId=result.insertId;
                 searchedUser[0].name=name;
                 searchedUser[0].email=email;
                 searchedUser[0].avatar=picture;
-
-                // const token = generateToken({
-                //     name,
-                //     email,
-                //     userId: result.insertId,
-                // });
-
-                // return res.status(200).json({
-                //     message: "successfully registered",
-                //     token,
-                //     userDetails:{
-                //            name,
-                //            email,
-                //            avatar:picture,
-                //            userId:result.insertId
-                //     }
-                // });
             }
 
             const token = generateToken({
@@ -70,23 +52,22 @@ exports.googleAuth = async (req, res) => {
                     name:searchedUser[0].name,
                     email:searchedUser[0].email,
                     avatar:searchedUser[0].avatar,
-                    userId:searchedUser[0].id
+                    userId:searchedUser[0].userId
                 },
             });
         } finally {
             pool.releaseConnection(connection);
         }
     } catch (e) {
-        //check this stuff!
-        if (e instanceof BadRequest) {
-            console.log(e);
-            return res.status(e.status).json({
-                message: e.message,
+        console.log(e);
+        if (e.status) {
+             res.status(e.status).json({
+                error: e.message,
             });
-        }
-
-        if (e) {
-            console.log(e);
+        }else{
+            res.status(500).json({
+                error: e.toString(),
+            });
         }
     }
 };
@@ -114,9 +95,13 @@ exports.register = async (req, res) => {
             
           
             const result = await insertOne(connection, {
-                tables: `users(name,avatar,email,password)`,
-                questions: `(?,?,?,?)`,
-                values: [name, process.env.DEFAULT_AVATAR, email,hashedPassword],
+                tables: 'users',
+                data:{
+                    name,
+                    avatar:process.env.DEFAULT_AVATAR,
+                    email,
+                    password:hashedPassword
+                }
             });
 
             const token = generateToken({
@@ -140,12 +125,15 @@ exports.register = async (req, res) => {
             pool.releaseConnection(connection);
         }
     } catch (e) {
+        console.log(e)
         if (e.status) {
             res.status(e.status).json({
                 error: e.message,
             });
         } else {
-            console.log(e);
+            res.status(500).json({
+                error: e.toString(),
+            });
         }
     }
 };
@@ -170,7 +158,7 @@ exports.login = async (req, res) => {
             if(!searchedUser.length) throw new Unauthorized("Email is not registered with us!");
 
             if(!searchedUser[0].emailVerified) throw new Unauthorized("Email is not verified!");
-
+            console.log(password,searchedUser[0].password)
             const check = await verifyHash(password,searchedUser[0].password);
 
             if(!check) throw new Unauthorized("Password is incorrect!");
@@ -196,12 +184,15 @@ exports.login = async (req, res) => {
             pool.releaseConnection(connection);
         }
     } catch (e) {
+        console.log(e);
         if (e.status) {
             res.status(e.status).json({
                 error: e.message,
             });
         } else {
-            console.log(e);
+            res.status(500).json({
+                error: e.toString()
+            });
         }
     }
 };
@@ -222,7 +213,7 @@ exports.sendEmail = async (req,res)=>{
         if(!searchedUser.length) throw new BadRequest("Email is not registered with us!");
         if(searchedUser[0].emailVerified) throw new BadRequest("Email is already verified!")
 
-          const result = await sendEmail(connection,email);
+          const result = await sendOTP(connection,email);
           res.status(200).json({
             message:result
           })
@@ -231,11 +222,16 @@ exports.sendEmail = async (req,res)=>{
           pool.releaseConnection(connection)
         }
     }catch(e){
-         if(e){
-             console.log(e);
+        console.log(e);
+         if(e.status){
+            
              res.status(500).json({
-                 error:e.toString()
+                 error:e.message
              })
+         }else{
+            res.status(500).json({
+                error: e.toString()
+            });
          }
     }
 }
@@ -247,12 +243,12 @@ exports.verifyEmail = async (req,res)=>{
           const {email,otp} = req.body;
 
         const searchedUser = await getOne(connection, {
-            fields: `userId, email, name, avatar, password,otp,otp_expiry`,
+            fields: `userId, email, name, avatar, password,otp,otp_expiry,emailVerified`,
             tables: `users`,
-            conditions: `email=? and otp=?`,
-            values: [email,otp],
+            conditions: `email=? `,
+            values: [email],
         });
-
+         
         if(!searchedUser.length) throw new BadRequest("Email is not registered with us!");
         if(searchedUser[0].emailVerified) throw new BadRequest("Email is already verified!");
 
@@ -266,36 +262,36 @@ exports.verifyEmail = async (req,res)=>{
             values:[1,email]
         });
 
-        const token = generateToken({
-            userId: searchedUser[0].userId,
-            name: searchedUser[0].name,
-            email: searchedUser[0].email,
-        });
+        // const token = generateToken({
+        //     userId: searchedUser[0].userId,
+        //     name: searchedUser[0].name,
+        //     email: searchedUser[0].email,
+        // });
 
         res.status(200).json({
-            token,
-            userDetails:{
-                name:searchedUser[0].name,
-                email,
-                avatar:searchedUser[0].avatar,
-                userId:searchedUser[0].id
-            }
+            // token,
+            // userDetails:{
+            //     name:searchedUser[0].name,
+            //     email,
+            //     avatar:searchedUser[0].avatar,
+            //     userId:searchedUser[0].id
+            // }
+            message:"Email registered! Redirect user to login"
         })
         }finally{
           pool.releaseConnection(connection)
         }
     }catch(e){
+        console.log(e)
         if(e.status){
-            console.log(e);
             res.status(e.status).json({
                 error:e.message
             })
         }
-        if(e){
-            console.log(e);
+        else{
             res.status(500).json({
-                error:e.toString()
-            })
+                error: e.toString()
+            });
         }
     }
 }

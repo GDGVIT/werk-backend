@@ -7,23 +7,20 @@ const authMiddleware = async (req, res,next ) => {
     try {
         const connection = await getConn(pool);
         try {
-            if (!res.header["Authorization"]) 
+            if (!req.headers["authorization"]) 
                 throw new Unauthorized("PLEASE LOGIN! NO AUTH TOKEN");
             
-            const token = res.header["Authorization"].replace("Bearer ","");
+            const token = req.headers["authorization"].replace("Bearer ","");
             const user = verifyToken(token);
-
             const searchedUser = await getOne(connection, {
-                fileds: `userId, email, avatar, name, emailVerified`,
+                fields: `userId, email, avatar, name, emailVerified`,
                 tables: `users`,
-                where: `userId=?`,
+                conditions: `userId=?`,
                 values: [user.userId],
             });
-            console.log(searchedUser);
-
+         
             if(!searchedUser.length) throw new Unauthorized("USER DOESN'T EXIST! PLEASE REGISTER");
-
-            if(!searchedUser[0].emailVerfied) throw new Unauthorized("USER'S EMAIL IS NOT VERIFIED!")
+            if(!searchedUser[0].emailVerified) throw new Unauthorized("USER'S EMAIL IS NOT VERIFIED!")
 
             req.user = searchedUser[0];
 
@@ -33,13 +30,17 @@ const authMiddleware = async (req, res,next ) => {
             pool.releaseConnection(connection)
         }
     } catch (e) {
+        console.log(e)
         //check for more errors that we didnt list!
         if(e.status){
             res.status(e.status).json({
-                error:e.message
+                error:e.toString()
             })
         }else{
-            console.log("error:::::not listed:::::",e)
+        
+            res.status(500).json({
+                error:e.toString()
+            })
         }
     }
 };
