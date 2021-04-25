@@ -1,9 +1,10 @@
 const transporter = require('../../config/email')
 const otpGenerator = require('otp-generator')
 const { updateOne } = require('../../db')
+const User = require("../models/user")
 require('dotenv').config()
 
-exports.sendOTP = async (connection, email) => {
+exports.sendOTP = async (user) => {
   const otp = otpGenerator.generate(6, {
     upperCase: false,
     specialChars: false
@@ -13,16 +14,22 @@ exports.sendOTP = async (connection, email) => {
 
   const mailOptions = {
     from: process.env.WERK_EMAIL,
-    to: email,
+    to: user.email,
     subject: 'OTP FOR VERIFICATION',
     text: `Thank you for registering! Your otp is ${otp} and is valid only for ten minutes.`
   }
-  await updateOne(connection, {
-    tables: 'users',
-    fields: 'otp_expiry=?,otp=?',
-    conditions: 'email=?',
-    values: [validityTime, otp, email]
-  })
+
+  user.otp = otp;
+  user.otpExpiry = validityTime;
+  await user.save();
+  
+
+  // await updateOne(connection, {
+  //   tables: 'users',
+  //   fields: 'otpExpiry=?,otp=?',
+  //   conditions: 'email=?',
+  //   values: [validityTime, otp, email]
+  // })
 
   return new Promise((resolve, reject) => {
     transporter.sendMail(mailOptions, function (error, info) {
