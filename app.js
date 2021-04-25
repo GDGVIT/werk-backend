@@ -12,7 +12,10 @@ const sessionRoutes = require('./api/routes/session')
 const { getOne, getConn, insertOne } = require('./db')
 const pool = require('./config/db')
 const { verifyToken } = require('./api/utils')
-
+const sequelize = require('./config/db')
+const User = require('./api/models/user');
+const Session = require('./api/models/session');
+const Participant = require('./api/models/participant')
 dotenv.config()
 
 app.use(bodyParser.json())
@@ -49,90 +52,117 @@ app.use('/session', sessionRoutes)
 
 // })
 
-// SERVER
-const PORT = process.env.PORT || 3000
-const server = app.listen(PORT, () => {
-  console.log('server started at: ' + PORT)
-})
-
-const io = socket(server, {
-  cors: {
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    preflightContinue: false
+// Associations
+User.hasOne(Session,{
+  foreignKey:{
+    name:'createdBy',
+    allowNull:false
   }
 })
 
-io.on('connection', async (socket) => {
-  console.log('connectedsjsfakkjfalkted!')
-  try {
-    const connection = await getConn(pool)
+User.belongsToMany(Session,{through:Participant})
+Session.belongsToMany(User,{through:Participant})
+
+
+
+
+//syncing tables
+  sequelize.sync()
+  .then(result=>{
+    console.log("ok")
+  }).catch(e=>{
+    console.log(e)
+  })
+
+  //sync successful
+  //server creation
+  const PORT = process.env.PORT || 3000
+  const server = app.listen(PORT, () => {
+    console.log('server started at: ' + PORT)
+  })
+
+  //initialization of socket with cors config
+  const io = socket(server, {
+    cors: {
+      origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      preflightContinue: false
+    }
+  })
+  
+  
+
+  io.on('connection', async (socket) => {
+    console.log('connectedsjsfakkjfalkted!')
     try {
-    // have to make seperate functions each
-      socket.on('initialize', async (data) => {
-        console.log('initialized', typeof data, data.token)
-        if (!data.token) throw new Error('token not passed')
-        const user = verifyToken(data.token)
-        socket.on('joinSession', async (data) => {
-          // data contains sessionID
-          console.log('joined session')
-          console.log(user)
-          if (!data.session) throw new Error('sessionId or token not passed')
-          const result = await getOne(connection, {
-            tables: 'participants',
-            fields: 's_id',
-            conditions: 'userId=? and s_id=? and joined=1',
-            values: [user.userId, data.session]
-
-          })
-          console.log(result)
-          if (result.length === 0) throw new Error('User is not in that session')
-          const room = `session-${result[0].s_id}`
-          socket.join(room)
-
-          let messages = await getOne(connection, {
-            tables: 'groupchats inner join users',
-            fields: 'message,users.name as sentBy,users.email as senderEmail,sentTime',
-            conditions: 'sentIn=? and users.userId=groupchats.sentBy order by sentTime asc',
-            values: [result[0].s_id]
-          })
-
-          messages = messages.map(m => {
-            return {
-              ...m,
-              sender: m.sentBy === user.userId
-            }
-          })
-
-          socket.emit('oldmessages', (messages))
-
-          socket.on('message', async (messageData) => {
-            console.log('message')
-            // message data contains
+      const connection = await getConn(pool)
+      try {
+      // have to make seperate functions each
+        socket.on('initialize', async (data) => {
+          console.log('initialized', typeof data, data.token)
+          if (!data.token) throw new Error('token not passed')
+          const user = verifyToken(data.token)
+          socket.on('joinSession', async (data) => {
+            // data contains sessionID
+            console.log('joined session')
             console.log(user)
-            socket.to(room).emit('message', messageData)
-            await insertOne(connection, {
-              tables: 'groupchats',
-              data: {
-                message: messageData.message,
-                sentBy: user.userId,
-                sentIn: result[0].s_id
+            if (!data.session) throw new Error('sessionId or token not passed')
+            const result = await getOne(connection, {
+              tables: 'participants',
+              fields: 's_id',
+              conditions: 'userId=? and s_id=? and joined=1',
+              values: [user.userId, data.session]
+  
+            })
+            console.log(result)
+            if (result.length === 0) throw new Error('User is not in that session')
+            const room = `session-${result[0].s_id}`
+            socket.join(room)
+  
+            let messages = await getOne(connection, {
+              tables: 'groupchats inner join users',
+              fields: 'message,users.name as sentBy,users.email as senderEmail,sentTime',
+              conditions: 'sentIn=? and users.userId=groupchats.sentBy order by sentTime asc',
+              values: [result[0].s_id]
+            })
+  
+            messages = messages.map(m => {
+              return {
+                ...m,
+                sender: m.sentBy === user.userId
               }
             })
-          })
-
-          socket.on('disconnect', () => {
-            socket.leave(room)
+  
+            socket.emit('oldmessages', (messages))
+  
+            socket.on('message', async (messageData) => {
+              console.log('message')
+              // message data contains
+              console.log(user)
+              socket.to(room).emit('message', messageData)
+              await insertOne(connection, {
+                tables: 'groupchats',
+                data: {
+                  message: messageData.message,
+                  sentBy: user.userId,
+                  sentIn: result[0].s_id
+                }
+              })
+            })
+  
+            socket.on('disconnect', () => {
+              socket.leave(room)
+            })
           })
         })
-      })
-    } finally {
-      pool.releaseConnection(connection)
+      } finally {
+        pool.releaseConnection(connection)
+      }
+    } catch (e) {
+      if (e) {
+        console.log(e)
+        socket.disconnect(true)
+      }
     }
-  } catch (e) {
-    if (e) {
-      console.log(e)
-      socket.disconnect(true)
-    }
-  }
-})
+  })
+
