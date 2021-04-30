@@ -8,6 +8,7 @@ const dotenv = require('dotenv')
 const helmet = require('helmet')
 const authRoutes = require('./api/routes/auth')
 const sessionRoutes = require('./api/routes/session')
+const taskRoutes = require('./api/routes/task')
 const chatRoutes= require('./api/routes/chat')
 const { getOne, getConn, insertOne } = require('./db')
 const pool = require('./config/db')
@@ -17,6 +18,7 @@ const User = require('./api/models/user');
 const Session = require('./api/models/session');
 const Participant = require('./api/models/participant')
 const GroupChat = require('./api/models/chat')
+const Task = require('./api/models/task')
 dotenv.config()
 
 app.use(bodyParser.json())
@@ -46,6 +48,7 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes)
 app.use('/session', sessionRoutes)
 app.use('/chats',chatRoutes)
+app.use('/task',taskRoutes)
 
 
 //associations
@@ -54,7 +57,9 @@ User.belongsToMany(Session,{through:Participant,foreignKey:'userId'})
 Session.belongsToMany(User,{through:Participant, foreignKey:'sId'})
 GroupChat.belongsTo(User,{foreignKey:{name:'sentBy',allowNull:false}})
 GroupChat.belongsTo(Session,{foreignKey:{name:'sentIn',allowNull:false}})
-
+Task.belongsTo(Session,{foreignKey:{name:'givenIn',allowNull:false},constraints: true})
+Task.belongsTo(User,{foreignKey:{name:'assignedTo'}})
+User.hasMany(Task,{foreignKey:{name:'createdBy',allowNull:false}})
 
 
 

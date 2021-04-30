@@ -1,10 +1,11 @@
-const pool = require('../../config/db')
+
 const { BadRequest } = require('../utils/errors')
 const { sendAccessCode } = require('../utils/email')
 const crypto = require('crypto')
 const User = require('../models/user')
 const Session = require("../models/session")
 const Participant = require("../models/participant")
+const Task = require("../models/task")
 require('dotenv').config()
 
 exports.createSession = async (req, res) => {
@@ -160,3 +161,6 @@ exports.getParticipants = async (req, res) => {
     }
   }
 }
+
+
+
