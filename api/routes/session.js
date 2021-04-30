@@ -9,6 +9,9 @@ router.post('/join', authMiddleware, controller.joinSession)
 
 router.get('/', authMiddleware, controller.getSessions)
 
-router.get('/getParticipants/:id', authMiddleware, controller.getParticipants)
+router.get(':id/participants', authMiddleware, controller.getParticipants)
+
+
+
 
 module.exports = router

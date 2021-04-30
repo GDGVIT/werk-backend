@@ -1,8 +1,9 @@
 const Sequelize  = require("sequelize");
 const sequelize = require("../../config/db");
+const Session = require("./session");
 
 
-const User = sequelize.define('user',{
+const Task = sequelize.define('task',{
     taskId:{
         type:Sequelize.INTEGER,
         primaryKey:true,
@@ -13,41 +14,51 @@ const User = sequelize.define('user',{
         allowNull:false,
     },
     description:{
-        type:Sequelize.STRING,
+        type:Sequelize.STRING(300),
         allowNull:false
     },
     title:{
         type:Sequelize.STRING,
         allowNull:false
     },
-    assignedTo:{
-        type:Sequelize.STRING,
-        allowNull:true
-    },
-    createdBy:{
-        type:Sequelize.BOOLEAN,
-        defaultValue: false
-    },
-    givenIn:{
-
-    },
-    expectedTime:{
+    expectedDuration:{
         type:Sequelize.INTEGER,
         allowNull:false
     },
-    pointsExpected:{
-        type:Sequelize.DOUBLE,
+    //in mins
+    completionDuration:{
+        type:Sequelize.INTEGER,
+        // allowNull:false
+    },
+    // givenIn:{
+    //     type:Sequelize.INTEGER,
+    //     references:{
+    //         model:Session,
+    //         allowNull:false
+    //     }
+    // },
+
+    //completedDate in epoch time
+    submittedDate:{
+        type:Sequelize.BIGINT,
+        // allowNull:false
+    },
+
+    //createdDate in epoch time
+    createdDate:{
+        type:Sequelize.BIGINT,
         allowNull:false
     },
-    pointsRewarded:{
+
+
+    // pointsExpected:{
+    //     type:Sequelize.DOUBLE,
+    //     allowNull:false
+    // },
+    points:{
         type:Sequelize.DOUBLE,
         defaultValue:0.0
-    },
-    
-
-
-},{
-    timestamps:true
+    }
 })
 
-module.exports = User;
+module.exports = Task;

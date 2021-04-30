@@ -1,6 +1,7 @@
 const GroupChat = require("../models/chat")
 const Participant = require("../models/participant");
-const User = require("../models/user")
+const User = require("../models/user");
+const { BadRequest } = require("../utils/errors");
 exports.oldMessages = async (req,res)=>{
     try{
     const sId = req.params.id;
@@ -11,7 +12,7 @@ exports.oldMessages = async (req,res)=>{
           joined:true
         }
       })
-      if (user.length === 0) throw new Error('User is not in that session')
+      if (user.length === 0) throw new BadRequest('User is not in that session')
 
     let messages = await GroupChat.findAll({
         include:{
