@@ -1,14 +1,11 @@
 const pool = require('../../config/db')
 const { BadRequest, Unauthorized } = require('../utils/errors')
 const { sendOTP } = require('../utils/email')
-const { getOne, getConn, updateOne, insertOne } = require('../../db')
 const { generateToken, hashIt, verifyHash /* ,verifyAccessToken */ } = require('../utils')
 const User = require("../models/user");
 require('dotenv').config()
 
 // exports.googleAuth = async (req, res) => {
-//   try {
-//     const connection = await getConn(pool)
 //     try {
 //       const { accessToken } = req.body
 
@@ -51,9 +48,6 @@ require('dotenv').config()
 //           userId: searchedUser[0].userId
 //         }
 //       })
-//     } finally {
-//       pool.releaseConnection(connection)
-//     }
 //   } catch (e) {
 //     console.log(e)
 //     if (e.status) {
@@ -73,15 +67,6 @@ exports.register = async (req, res) => {
       const { name, email, password } = req.body
       if (!name || !email || !password) throw new BadRequest('Required data not provided')
 
-      // if(password.length>6) throw new BadRequest("Password must be minimum of 7 chars");
-
-      // const searchedUser = await getOne(connection, {
-      //   fields: 'userId, email, name, avatar',
-      //   tables: 'users',
-      //   conditions: 'email=?',
-      //   values: [email]
-      // })
-
       const searchedUser = await User.findAll({
         attributes:{exclude:['password']},
         where:{
@@ -95,28 +80,15 @@ exports.register = async (req, res) => {
 
       const hashedPassword = await hashIt(password)
 
-      // const result = await insertOne(connection, {
-      //   tables: 'users',
-      //   data: {
-      //     name,
-      //     avatar: process.env.DEFAULT_AVATAR,
-      //     email,
-      //     password: hashedPassword
-      //   }
-      // })
       const user = await User.create({
         name,
         email,
         password:hashedPassword
       })
 
-      
-
       const token = generateToken({
         userId: user.userId
       })
-
-      // const info = await sendEmail(connection, email);
 
       res.status(200).json({
         token,
@@ -146,13 +118,6 @@ exports.login = async (req, res) => {
       const { email, password } = req.body
 
       if (!email || !password) throw new BadRequest('Required data is not provided')
-
-      // const searchedUser = await getOne(connection, {
-      //   fields: 'userId, email, name, avatar, password, emailVerified',
-      //   tables: 'users',
-      //   conditions: 'email=?',
-      //   values: [email]
-      // })
       const searchedUser = await User.findAll({
         where:{
           email:email

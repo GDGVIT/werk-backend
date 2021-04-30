@@ -10,22 +10,6 @@ const Participant = sequelize.define('participant',{
         primaryKey:true,
         autoIncrement:true
     },
-    userId:{
-        type: Sequelize.INTEGER,
-        allowNull:false,
-        references:{
-            model:User,
-            key:'userId'
-        }
-    },
-    sId:{
-        type:Sequelize.INTEGER,
-        allowNull:false,
-        references:{
-            model:Session,
-            key:'sessionId'
-        }
-    },
     points:{
         type:Sequelize.DOUBLE,
         defaultValue:0.0
