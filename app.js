@@ -45,23 +45,12 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes)
 app.use('/session', sessionRoutes)
 
-// app.use("/*",(req,res)=>{
-//     res.status(404).json({
-//       error:"page not found!!"
-//     });
 
-// })
 
-// Associations
-User.hasOne(Session,{
-  foreignKey:{
-    name:'createdBy',
-    allowNull:false
-  }
-})
-
-User.belongsToMany(Session,{through:Participant})
-Session.belongsToMany(User,{through:Participant})
+//associations
+Session.belongsTo(User,{foreignKey:{name:'createdBy',allowNull:false}})
+User.belongsToMany(Session,{through:Participant,foreignKey:'userId'})
+Session.belongsToMany(User,{through:Participant, foreignKey:'sId'})
 
 
 
@@ -93,7 +82,6 @@ Session.belongsToMany(User,{through:Participant})
   
 
   io.on('connection', async (socket) => {
-    console.log('connectedsjsfakkjfalkted!')
     try {
       const connection = await getConn(pool)
       try {

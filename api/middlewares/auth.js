@@ -1,6 +1,4 @@
 const { Unauthorized } = require('../utils/errors')
-// const pool = require('../../config/db')
-// const { getConn, getOne } = require('../../db')
 const { verifyToken } = require('../utils')
 const User = require('../models/user')
 
@@ -10,12 +8,6 @@ const authMiddleware = async (req, res, next) => {
 
       const token = req.headers.authorization.replace('Bearer ', '')
       const user = verifyToken(token)
-      // const searchedUser = await getOne(connection, {
-      //   fields: 'userId, email, avatar, name, emailVerified',
-      //   tables: 'users',
-      //   conditions: 'userId=?',
-      //   values: [user.userId]
-      // })
       const searchedUser = await User.findAll({
         attributes:{
           exclude:['password']
