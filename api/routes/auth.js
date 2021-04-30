@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const controllers = require('../controllers/auth')
 
-// router.post('/google', controllers.googleAuth)
+router.post('/google', controllers.googleAuth)
 
 router.post('/register', controllers.register)
 
