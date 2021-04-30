@@ -1,66 +1,53 @@
 const pool = require('../../config/db')
 const { BadRequest, Unauthorized } = require('../utils/errors')
 const { sendOTP } = require('../utils/email')
-const { generateToken, hashIt, verifyHash /* ,verifyAccessToken */ } = require('../utils')
+const { generateToken, hashIt, verifyHash ,verifyAccessToken  } = require('../utils')
 const User = require("../models/user");
+
 require('dotenv').config()
 
-// exports.googleAuth = async (req, res) => {
-//     try {
-//       const { accessToken } = req.body
+exports.googleAuth = async (req, res) => {
+    try {
+      const { accessToken } = req.body
 
-//       if (!accessToken) throw new BadRequest('ACCESS TOKEN NOT SPECIFIED')
+      if (!accessToken) throw new BadRequest('ACCESS TOKEN NOT SPECIFIED')
 
-//       const ticket = await verifyAccessToken(accessToken)
+      const user = await verifyAccessToken(accessToken)
+      const searchedUser = await User.findOne({
+        attributes:{exclude:['password']},
+        where:{
+          email:user.email
+          }
+      })
+      if (!seachedUser) {
+        const result =  await User.create({
+          name:user.displayName || "",
+          email:user.email,
+          avatar: user.photoURL || process.envv.DEFAULT_AVATAR,
+          emailVerified:true
+        })
+        searchedUser = result;
+      }
+      const token = generateToken({
+        userId:searchedUser.userId
+      })
 
-//       const { email, name, picture } = ticket.getPayload()
-
-//       const searchedUser = await getOne(connection, {
-//         fields: 'userId, email, name, avatar',
-//         tables: 'users',
-//         conditions: 'email=?',
-//         values: [email]
-//       })
-
-//       if (!(seachedUser.length)) {
-//         if (!picture) picture = process.env.DEFAULT_AVATAR
-
-//         const result = await insertOne(connection, {
-//           tables: 'users',
-//           data: { name, avatar: picture, email, emailVerified: 1 }
-//         })
-//         searchedUser[0].userId = result.insertId
-//         searchedUser[0].name = name
-//         searchedUser[0].email = email
-//         searchedUser[0].avatar = picture
-//       }
-
-//       const token = generateToken({
-//         userId: searchedUser[0].userId
-//       })
-
-//       return res.status(200).json({
-//         token,
-//         userDetails: {
-//           name: searchedUser[0].name,
-//           email: searchedUser[0].email,
-//           avatar: searchedUser[0].avatar,
-//           userId: searchedUser[0].userId
-//         }
-//       })
-//   } catch (e) {
-//     console.log(e)
-//     if (e.status) {
-//       res.status(e.status).json({
-//         error: e.message
-//       })
-//     } else {
-//       res.status(500).json({
-//         error: e.toString()
-//       })
-//     }
-//   }
-// }
+      res.status(200).json({
+        token,
+        userDetails: {
+          name:searchedUser.name,
+          email:searchedUser.email,
+          avatar: searchedUser.avatar,
+          userId: searchedUser.userId
+        }
+      })
+  } catch (e) {
+    console.log(e)
+    res.status(e.status||500).json({
+      error:e.status?e.message:e.toString()
+    })
+  }
+}
 
 exports.register = async (req, res) => {
     try {
