@@ -16,23 +16,16 @@ const authMiddleware = async (req, res, next) => {
           userId:user.userId
         }
       })
-      if (!searchedUser.length) throw new Unauthorized("USER DOESN'T EXIST! PLEASE REGISTER")
-      if (!searchedUser[0].emailVerified) throw new Unauthorized("USER'S EMAIL IS NOT VERIFIED!")
+      if (!searchedUser.length) throw new Unauthorized('USER DOESN\'T EXIST! PLEASE REGISTER')
+      if (!searchedUser[0].emailVerified) throw new Unauthorized('USER\'S EMAIL IS NOT VERIFIED!')
 
       req.user = searchedUser[0]
       next()
   } catch (e) {
     console.log(e)
-    // check for more errors that we didnt list!
-    if (e.status) {
-      res.status(e.status).json({
-        error: e.toString()
+      res.status(e.status || 500).json({
+        error: e.status?e.message:e.toString()
       })
-    } else {
-      res.status(500).json({
-        error: e.toString()
-      })
-    }
   }
 }
 

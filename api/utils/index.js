@@ -1,8 +1,6 @@
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 require('dotenv').config()
-const { OAuth2Client } = require('google-auth-library')
-const client = new OAuth2Client(process.env.CLIENT_ID)
 const admin = require('../../config/firebase');
 
 exports.generateToken = (user) => {
@@ -24,7 +22,6 @@ exports.verifyHash = (password, hash) => {
 
 exports.verifyAccessToken = (token) => {
   return new Promise((resolve,reject)=>{
-  console.log("hdfkajdfl")
   admin
   .auth()
   .verifyIdToken(token)
@@ -40,10 +37,8 @@ exports.verifyAccessToken = (token) => {
         reject(error)
       });
     })
-      .catch((error) => {
+    .catch((error) => {
         reject(error)
       });
-})
-
-
+  })
 }

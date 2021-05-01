@@ -1,7 +1,6 @@
 const transporter = require('../../config/email')
 const otpGenerator = require('otp-generator')
-const { updateOne } = require('../../db')
-const User = require("../models/user")
+// const User = require('../models/user')
 require('dotenv').config()
 
 exports.sendOTP = async (user) => {
@@ -22,14 +21,6 @@ exports.sendOTP = async (user) => {
   user.otp = otp;
   user.otpExpiry = validityTime;
   await user.save();
-  
-
-  // await updateOne(connection, {
-  //   tables: 'users',
-  //   fields: 'otpExpiry=?,otp=?',
-  //   conditions: 'email=?',
-  //   values: [validityTime, otp, email]
-  // })
 
   return new Promise((resolve, reject) => {
     transporter.sendMail(mailOptions, function (error, info) {

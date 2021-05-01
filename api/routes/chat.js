@@ -5,5 +5,4 @@ const authMiddleware = require('../middlewares/auth')
 
 router.get('/:id', authMiddleware, controller.oldMessages)
 
-
 module.exports = router
