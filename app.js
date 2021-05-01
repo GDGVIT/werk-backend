@@ -1,149 +1,161 @@
-const express = require("express");
-const app = express();
-const bodyParser = require("body-parser");
-const morgan = require("morgan");
-const socket = require("socket.io")
+const express = require('express')
+const app = express()
+const bodyParser = require('body-parser')
+const morgan = require('morgan')
+const socket = require('socket.io')
 // const expressRL = require("express-rate-limiter");
-const dotenv = require("dotenv");
-const helmet = require("helmet");
-const authRoutes = require("./api/routes/auth");
-const sessionRoutes = require("./api/routes/session");
+const dotenv = require('dotenv')
+const helmet = require('helmet')
+const {populateCreds} = require("./config/serviceAccount");
+populateCreds()
+const authRoutes = require('./api/routes/auth')
+const sessionRoutes = require('./api/routes/session')
+const taskRoutes = require('./api/routes/task')
+const chatRoutes= require('./api/routes/chat')
+const { verifyToken } = require('./api/utils')
+const sequelize = require('./config/db')
+const User = require('./api/models/user');
+const Session = require('./api/models/session');
+const Participant = require('./api/models/participant')
+const GroupChat = require('./api/models/chat')
+const Task = require('./api/models/task')
+dotenv.config()
 
-const { getOne, getConn, insertOne } = require("./db");
-const pool = require("./config/db");
-const { verifyToken } = require("./api/utils");
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: true }))
 
-dotenv.config();
+if (!process.env.TESTING) app.use(morgan('tiny'))
 
+// helmet
+app.use(helmet())
 
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended:true}));
-
-
-if(!process.env.TESTING){
-    app.use(morgan("tiny"));
-}
-
-//helmet
-app.use(helmet());
-
-//cors
+// cors
 app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header(
-      "Access-Control-Allow-Headers","Origin, X-Requested-With, Content-Type, Accept, Authorization"
-    );
-    if (req.method === "OPTIONS") {
-      res.header("Access-Control-Allow-Methods", "PUT, POST, PATCH, DELETE, GET");
-      return res.status(200).json({});
-    }
-    next();
-  });
-
-
-
-//ROUTES
-app.use("/auth",authRoutes);
-app.use("/session",sessionRoutes);
-
-// app.use("/*",(req,res)=>{
-//     res.status(404).json({
-//       error:"page not found!!"
-//     });
-
-// })
-
-
-//SERVER
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT,()=>{
-  console.log("server started at: "+PORT)
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header(
+    'Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+  )
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Methods', 'PUT, POST, PATCH, DELETE, GET')
+    return res.status(200).json({})
+  }
+  next()
 })
 
-io = socket(server,{
-  cors:{
-    origin:'*',
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    preflightContinue: false
-  }
-});
+// ROUTES
+app.use('/auth', authRoutes)
+app.use('/session', sessionRoutes)
+app.use('/chats',chatRoutes)
+app.use('/task',taskRoutes)
 
-io.on("connection",async(socket)=>{
-  console.log("connectedsjsfakkjfalkted!")
-  try{
-    const connection = await getConn(pool);
-  try{
-    //have to make seperate functions each
-   socket.on("initialize",async(data)=>{
-     console.log("initialized",typeof data,data.token)
-     if(!data.token) throw new Error("token not passed");
-     let user = verifyToken(data.token);
-     socket.on("joinSession",async (data)=>{
-      //data contains sessionID
-      console.log("joined session")
-      console.log(user);
-      if(!data.session) throw new Error("sessionId or token not passed")
-      const result = await getOne(connection,{
-        tables:'participants',
-        fields:'s_id',
-        conditions:'userId=? and s_id=? and joined=1',
-        values:[user.userId,data.session]
- 
-      })
-      console.log(result)
-      if(result.length==0) throw new Error("User is not in that session");
-      let room = `session-${result[0].s_id}`
-      socket.join(room)
+//associations
+Session.belongsTo(User,{foreignKey:{name:'createdBy',allowNull:false}})
+User.belongsToMany(Session,{through:Participant,foreignKey:'userId'})
+Session.belongsToMany(User,{through:Participant, foreignKey:'sId'})
+GroupChat.belongsTo(User,{foreignKey:{name:'sentBy',allowNull:false}})
+GroupChat.belongsTo(Session,{foreignKey:{name:'sentIn',allowNull:false}})
+Task.belongsTo(Session,{foreignKey:{name:'givenIn',allowNull:false},constraints: true})
+Task.belongsTo(User,{foreignKey:{name:'assignedTo'}})
+User.hasMany(Task,{foreignKey:{name:'createdBy',allowNull:false}})
 
-      let messages = await getOne(connection,{
-        tables:'groupchats inner join users',
-        fields:'message,users.name as sentBy,users.email as senderEmail,sentTime',
-        conditions:'sentIn=? and users.userId=groupchats.sentBy order by sentTime asc',
-        values:[result[0].s_id]
-      })
+// syncing tables
+sequelize.sync()
+  .then(result=>{
+    const PORT = process.env.PORT || 3000
+    const server = app.listen(PORT, () => {
+      console.log('server started at: ' + PORT)
+    })
 
-      messages = messages.map(m=>{
-        return {
-          ...m,
-          sender:m.sentBy===user.userId? true : false
-        }
-      })
+  // initialization of socket with cors config
+    const io = socket(server, {
+      cors: {
+       origin: '*',
+       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        preflightContinue: false
+      }
+    })
 
-      socket.emit('oldmessages',(messages));
-
-      socket.on('message',async (messageData)=>{
-        console.log("message")
-           //message data contains
-          console.log(user);
-          socket.to(room).emit('message',messageData);
-          await insertOne(connection,{
-            tables:'groupchats',
-            data:{
-              message:messageData.message,
-              sentBy:user.userId,
-              sentIn:result[0].s_id
+    io.on('connection', async (socket) => {
+          let user = null;
+          let session = null;
+          let currentRoom = null;
+        // in app are we gonna disconnect the socket when he moves to different screen ?? - if no then seperate everything which is kept inside!!
+          console.log("connected!")
+          // INITIALIZATION OF THE USER!
+          socket.on('initialize', async (data) => {
+            if(!user){
+              if (!data.token){
+                console.log('token not passed!!!')
+                return
+              }
+                console.log("initialized")
+                user = verifyToken(data.token)
             }
+          else console.log("already intialized!!")
           })
-      })
 
-      socket.on('disconnect',()=>{
-        socket.leave(room);
-      })
-   })
-   
-   })
-  }finally{
-    pool.releaseConnection(connection);
-  }
-}catch(e){
-  if(e){
-    console.log(e);
-    socket.disconnect(true)
-  }
-}
+          //MESSAGE SENT!
+          socket.on('message', async (messageData) => {
+            if(!user){ console.log('USER IS NOT AUTHENTICATED!');return}
+            if(!session){ console.log('USER DINDT JOIN ANY SESSION YET');return}
+              if(messageData.message){
+                socket.to(currentRoom).emit('message', messageData)
+                let date = new Date();
+                //this epoch time is of utc standard
+                await GroupChat.create({
+                    message:messageData.message,
+                    sentBy:user.userId,
+                    sentIn:session,
+                    sentTime:date.getTime()
+                })
+              }else{
+                console.log("nothing is sent in the message Data!")
+              }
+          })
 
-})
+          //JOINING A SESSION
+          socket.on('joinSession', async (data) => {
+            // data contains sessionID
+            if(session){
+              console.log('didnt leave the prev session yet')
+              return
+            }
+            if (!data.session || !user){
+              console.log('session ID not passed','user: '+user)
+              return
+            }
+  
+              session = data.session;
+              const participant = await Participant.findAll({
+                where:{
+                  userId:user.userId,
+                  sId:data.session,
+                  joined:true
+                }
+              })
+              console.log(participant.length)
+              if (participant.length === 0) {
+                console.log("user is not in the session")
+                return
+              }
+                const currentRoom = `session-${session}`
+                socket.join(currentRoom)
+                console.log("joined room: "+currentRoom);
+          })
 
+          socket.on('leaveSession', () => {
+            if(session==null){
+              console.log("NOT IN ANY SESSION")
+              return
+            }
+            socket.leave(currentRoom);
+            currentRoom=null;
+            sessoin=null;
+            console.log('user left the session')
+          })
 
-
+    })
+  }).catch(e=>{
+    console.log(e)
+  })
+  

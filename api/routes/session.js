@@ -1,26 +1,14 @@
-const express = require("express");
-const router = express.Router();
-const controller = require("../controllers/session");
-const authMiddleware = require("../middlewares/auth")
+const express = require('express')
+const router = express.Router()
+const controller = require('../controllers/session')
+const authMiddleware = require('../middlewares/auth')
 
+router.get('/', authMiddleware, controller.getSessions)
 
+router.get('/:id/participants', authMiddleware, controller.getParticipants)
 
-router.post("/create",authMiddleware,controller.createSession);
+router.post('/create', authMiddleware, controller.createSession)
 
+router.post('/join', authMiddleware, controller.joinSession)
 
-
-router.post("/join",authMiddleware,controller.joinSession);
-
-
-router.get("/",authMiddleware,controller.getSessions);
-
-
-router.get("/getParticipants/:id",authMiddleware,controller.getParticipants);
-
-
-
-
-
-
-
-module.exports = router;
+module.exports = router

@@ -1,205 +1,142 @@
-const pool = require("../../config/db");
-const { BadRequest, InternalServerError, Unauthorized } = require("../utils/errors");
-const { sendAccessCode } = require("../utils/email");
-const { getOne, getConn,updateOne,insertOne } = require("../../db");
-const { generateToken, hashIt, verifyHash,verifyAccessToken } = require("../utils");
-const crypto = require("crypto")
-require("dotenv").config()
 
+const { BadRequest, Unauthorized } = require('../utils/errors')
+const { sendAccessCode } = require('../utils/email')
+const crypto = require('crypto')
+const User = require('../models/user')
+const Session = require('../models/session')
+const Participant = require('../models/participant')
+// const Task = require('../models/task')
+require('dotenv').config()
 
-exports.createSession = async (req,res)=>{
+exports.createSession = async (req, res) => {
     try {
-        const connection = await getConn(pool);
-        try {
-            //start time and end time format === YYYY-MM-DD HH:MM:SS
-            const { startTime,endTime,taskCreationByAll,taskAssignByAll,participants } = req.body;
-            if(!startTime || !endTime || !taskCreationByAll || !taskAssignByAll || !participants.length) throw new BadRequest("All required fields are not provided");
-            const accessCode = crypto.randomBytes(5).toString('hex');
-            const result = await getOne(connection,{
-                tables:'users',
-                fields:'userId,email',
-                conditions:'email in (?)',
-                values:[participants]
-
-            })
-
-            if(!result.length) throw new BadRequest("Provided emails are not registered with any of our user")
-            
-            
-            const data={
-                startTime,
-                endTime,
-                createdBy:req.user.userId,
-                assignByAll:taskAssignByAll,
-                taskByAll:taskCreationByAll,
-                accessCode
-            }
-            const session = await insertOne(connection,{
-                tables:'sessions',
-                data
-            })
-            result.splice(0,0,{userId:req.user.userId,email:req.user.email})
-
-            result.forEach(async (p,i)=>{
-                await insertOne(connection,{
-                    tables:'participants',
-                    data:{
-                        s_id:session.insertId,
-                        userId:p.userId,
-                        joined:i==0?1:0
-                    }
-                })
-                if(i!==0) await sendAccessCode(accessCode,p.email,req.user.name)
-            })
-           
-           res.status(200).json({
-               session:{sessionId:session.insertId,...data}
-           })
-
-
-      
-        } finally {
-            pool.releaseConnection(connection);
+      //start and end time are in epoch format
+      const { startTime, endTime, taskCreationByAll, taskAssignByAll, participants } = req.body
+      if (!startTime || !endTime || !taskCreationByAll || !taskAssignByAll || !participants.length) throw new BadRequest('All required fields are not provided')
+      const accessCode = crypto.randomBytes(5).toString('hex')
+      const result = await User.findAll({
+        attributes:['userId','email'],
+        where:{
+          email:participants
         }
-    } catch (e) {
-        console.log(e)
-        if (e.status) {
-            res.status(e.status).json({
-                error: e.message,
-            });
-        }else {
-            res.status(500).json({
-                error:e.toString()
-            })
-        }
-    }
+      })
+      if (!result.length) throw new BadRequest('Provided emails are not registered with any of our user')
+
+      const session = await Session.create({
+        startTime,
+        endTime,
+        createdBy:req.user.userId,
+        taskCreationUniv:taskCreationByAll,
+        taskAssignUniv:taskAssignByAll,
+        accessCode
+      })
+
+      result.splice(0, 0, req.user)
+
+      result.forEach(async (p, i) => {
+
+        await Participant.create({
+          sId:session.sessionId,
+          userId:p.userId,
+          joined: i === 0 ? true:false
+        })
+        if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name)
+      })
+
+      res.status(200).json({
+        session: {...session.dataValues}
+      })
+  } catch (e) {
+    console.log(e)
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
+      })
+  }
 }
 
-
-exports.joinSession = async (req,res)=>{
+exports.joinSession = async (req, res) => {
     try {
-        const connection = await getConn(pool);
-        try {
-            //start time and end time format === YYYY-MM-DD HH:MM:SS
-            const { accessCode} = req.body;
-            
-            const session = await getOne(connection,{
-                tables:'(select * from sessions where accessCode=?) as userSessions inner join users',
-                fields:'s_id,startTime,endTime,createdBy,users.name as creator_name, users.email as creator_email ',
-                conditions:'userSessions.createdBy=users.userId',
-                values:[accessCode]
-            })
-            console.log(session)
-            if(!session.length) throw new BadRequest("No session is associated with the given accessCode");
-
-            const participant = await getOne(connection,{
-                tables:'participants',
-                fields:'id,joined',
-                conditions:'userId=? and s_id=?',
-                values:[req.user.userId,session[0].s_id]
-            })
-
-            if(participant.length===0) throw new BadRequest("You have not been invited to this session");
-            if(participant[0].joined) throw new BadRequest("You have already joined this session");
-            await updateOne(connection,{
-                tables:'participants',
-                fields:'joined=?',
-                conditions:'id=?',
-                values:[1,participant[0].id]
-            })
-           res.status(200).json({
-               session:session[0]
-           })
-
-
-      
-        } finally {
-            pool.releaseConnection(connection);
+      const { accessCode } = req.body
+      const session = await Session.findAll({
+        where:{
+          accessCode
+        },
+        include:{
+          model:User,
+          attributes:{
+            exclude:['password','otpExpiry','otp','emailVerified']
+          }
         }
-    } catch (e) {
-        console.log(e)
-        if (e.status) {
-            res.status(e.status).json({
-                error: e.message,
-            });
-        }else {
-            res.status(500).json({
-                error:e.toString()
-            })
+      })
+
+      if (!session.length) throw new BadRequest('No session is associated with the given accessCode')
+
+      const participant = await Participant.findAll({
+        attributes:['participantId','joined'],
+        where:{
+          userId:req.user.userId,
+          sId:session[0].sessionId
         }
-    }
+      })
+
+      if (participant.length === 0) throw new Unauthorized('You have not been invited to this session')
+      if (participant[0].joined) throw new BadRequest('You have already joined this session')
+
+      participant[0].joined = true;
+      await participant[0].save();
+      res.status(200).json({
+        session: session[0]
+      })
+  } catch (e) {
+    console.log(e)
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
+      })
+  }
 }
 
-exports.getSessions = async(req,res)=>{
+exports.getSessions = async (req, res) => {
     try {
-        const connection = await getConn(pool);
-        try {
-            const sessions = await getOne(connection,{
-                tables:`(select s_id,startTime,endTime,accessCode,createdAt,noOfParticipantsJoined,createdBy 
-                    from (select s_id,count(id) as noOfParticipantsJoined from participants 
-                    where s_id in (select s_id from participants where userId=? and joined=1 ) and participants.joined=1 group by s_id) as p
-                     natural join sessions) as userSessions inner join users`,
-                fields:'userSessions.*,users.name as creator_name,users.email as creator_email ',
-                conditions:'userSessions.createdBy=users.userId',
-                values:[req.user.userId]
-            })
-
-            res.status(200).json({
-                sessions:[...sessions]
-            })
-        } finally {
-            pool.releaseConnection(connection);
+      const user = req.user;
+      const sessions = await user.getSessions();
+      console.log(await sessions[0].getUser({attributes:['name','email','avatar']}))
+      let sessionWithUser=[]
+      for(let i=0;i<=sessions.length-1;i++){
+        if(sessions[i].participant.joined){
+          sessions[i].createdBy = await sessions[i].getUser({attributes:['name','email','avatar']});
+          delete sessions[i].dataValues.participant
+          sessionWithUser.push(sessions[i])
         }
-    } catch (e) {
-        console.log(e)
-        if (e.status) {
-            res.status(e.status).json({
-                error: e.message,
-            });
-        }else {
-            res.status(500).json({
-                error:e.toString()
-            })
-        }
-    }
+      }
+      res.status(200).json({
+        sessions: sessionWithUser
+      })
+  } catch (e) {
+    console.log(e)
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
+      })
+  }
 }
 
-
-exports.getParticipants = async(req,res)=>{
+exports.getParticipants = async (req, res) => {
     try {
-        const connection = await getConn(pool);
-        try {
-            const s_id = req.params.id;
-            const users = await getOne(connection,{
-                tables:'(select * from participants where s_id=?) as p natural join users order by points desc',
-                fields:'userId,name,email,points,joined',
-                conditions:'',
-                values:[s_id]
-            })
-            if(users.findIndex(u=>u.userId==req.user.userId)===-1) throw new BadRequest("you are not a participant of this session");
+      const session = await Session.findByPk(req.params.id)
+      const participants = await session.getUsers()
+      const users = participants.map(p=>{return {userId:p.userId,name:p.name,email:p.email,avatar:p.avatar,joined:p.participant.joined,
+        points:p.participant.points,sessionId:p.participant.sId}})
+      if (users.findIndex(u => u.userId === req.user.userId) === -1) throw new Unauthorized('you are not a participant of this session')
 
-            res.status(200).json({
-                participants:[...users]
-            })
-        } finally {
-            pool.releaseConnection(connection);
-        }
-    } catch (e) {
-        console.log(e)
-        if (e.status) {
-            res.status(e.status).json({
-                error: e.message,
-            });
-        }else {
-            res.status(500).json({
-                error:e.toString()
-            })
-        }
-    }
+      res.status(200).json({
+        participants: users.sort(function(a, b){return b.points-a.points})
+      })
+  } catch (e) {
+    console.log(e)
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
+      })
+  }
 }
-
-
-
 
 
 
