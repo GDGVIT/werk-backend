@@ -18,9 +18,9 @@ exports.sendOTP = async (user) => {
     text: `Thank you for registering! Your otp is ${otp} and is valid only for ten minutes.`
   }
 
-  user.otp = otp;
-  user.otpExpiry = validityTime;
-  await user.save();
+  user.otp = otp
+  user.otpExpiry = validityTime
+  await user.save()
 
   return new Promise((resolve, reject) => {
     transporter.sendMail(mailOptions, function (error, info) {

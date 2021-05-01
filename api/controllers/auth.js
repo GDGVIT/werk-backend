@@ -1,137 +1,137 @@
 
 const { BadRequest, Unauthorized } = require('../utils/errors')
 // const { sendOTP } = require('../utils/email')
-const { generateToken, hashIt, verifyHash ,verifyAccessToken  } = require('../utils')
-const User = require('../models/user');
+const { generateToken, hashIt, verifyHash, verifyAccessToken } = require('../utils')
+const User = require('../models/user')
 
 require('dotenv').config()
 
 exports.googleAuth = async (req, res) => {
-    try {
-      const { accessToken } = req.body
-      if (!accessToken) throw new BadRequest('ACCESS TOKEN NOT SPECIFIED')
-      const user = await verifyAccessToken(accessToken)
-      const searchedUser = await User.findOne({
-        attributes:{exclude:['password']},
-        where:{
-          email:user.email
-          }
-      })
-      if (!seachedUser) {
-        const result =  await User.create({
-          name:user.displayName || '',
-          email:user.email,
-          avatar: user.photoURL || process.envv.DEFAULT_AVATAR,
-          emailVerified:true
-        })
-        searchedUser = result;
+  try {
+    const { accessToken } = req.body
+    if (!accessToken) throw new BadRequest('ACCESS TOKEN NOT SPECIFIED')
+    const user = await verifyAccessToken(accessToken)
+    let searchedUser = await User.findOne({
+      attributes: { exclude: ['password'] },
+      where: {
+        email: user.email
       }
-      const token = generateToken({
-        userId:searchedUser.userId
+    })
+    if (!searchedUser) {
+      const result = await User.create({
+        name: user.displayName || '',
+        email: user.email,
+        avatar: user.photoURL || process.envv.DEFAULT_AVATAR,
+        emailVerified: true
       })
+      searchedUser = result
+    }
+    const token = generateToken({
+      userId: searchedUser.userId
+    })
 
-      res.status(200).json({
-        token,
-        userDetails: {
-          name:searchedUser.name,
-          email:searchedUser.email,
-          avatar: searchedUser.avatar,
-          userId: searchedUser.userId
-        }
-      })
+    res.status(200).json({
+      token,
+      userDetails: {
+        name: searchedUser.name,
+        email: searchedUser.email,
+        avatar: searchedUser.avatar,
+        userId: searchedUser.userId
+      }
+    })
   } catch (e) {
-    console.log(e);
-    res.status(e.status||500).json({
-      error:e.status?e.message:e.toString()
+    console.log(e)
+    res.status(e.status || 500).json({
+      error: e.status ? e.message : e.toString()
     })
   }
 }
 
 exports.register = async (req, res) => {
-    try {
-      const { name, email, password } = req.body
-      if (!name || !email || !password) throw new BadRequest('Required data not provided')
+  try {
+    const { name, email, password } = req.body
+    if (!name || !email || !password) throw new BadRequest('Required data not provided')
 
-      const searchedUser = await User.findAll({
-        attributes:{exclude:['password']},
-        where:{
-          email:email
-        }
-      })
-      
-      console.log(searchedUser);
+    const searchedUser = await User.findAll({
+      attributes: { exclude: ['password'] },
+      where: {
+        email: email
+      }
+    })
 
-      if (searchedUser.length) { throw new BadRequest('Email is already registered!') }
+    console.log(searchedUser)
 
-      const hashedPassword = await hashIt(password)
+    if (searchedUser.length) { throw new BadRequest('Email is already registered!') }
 
-      const user = await User.create({
+    const hashedPassword = await hashIt(password)
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword
+    })
+
+    const token = generateToken({
+      userId: user.userId
+    })
+
+    res.status(200).json({
+      token,
+      userDetails: {
         name,
         email,
-        password:hashedPassword
-      })
-
-      const token = generateToken({
+        avatar: user.avatar,
         userId: user.userId
-      })
-
-      res.status(200).json({
-        token,
-        userDetails: {
-          name,
-          email,
-          avatar: user.avatar,
-          userId: user.userId
-        }
-      })
-    }catch (e) {
+      }
+    })
+  } catch (e) {
     console.log(e)
-      res.status(e.status||500).json({
-        error: e.status?e.message:e.toString()
-      })
+    res.status(e.status || 500).json({
+      error: e.status ? e.message : e.toString()
+    })
   }
 }
 
 exports.login = async (req, res) => {
-    try {
-      const { email, password } = req.body
+  try {
+    const { email, password } = req.body
 
-      if (!email || !password) throw new BadRequest('Required data is not provided')
-      const searchedUser = await User.findAll({
-        where:{
-          email:email
-        }
-      })
-      if (!searchedUser.length) throw new Unauthorized('Email is not registered with us!')
+    if (!email || !password) throw new BadRequest('Required data is not provided')
+    const searchedUser = await User.findAll({
+      where: {
+        email: email
+      }
+    })
+    if (!searchedUser.length) throw new Unauthorized('Email is not registered with us!')
 
-      if (!searchedUser[0].emailVerified) throw new Unauthorized('Email is not verified!')
-      console.log(password, searchedUser[0].password)
-      const check = await verifyHash(password, searchedUser[0].password)
+    if (!searchedUser[0].emailVerified) throw new Unauthorized('Email is not verified!')
+    console.log(password, searchedUser[0].password)
+    const check = await verifyHash(password, searchedUser[0].password)
 
-      if (!check) throw new Unauthorized('Password is incorrect!')
+    if (!check) throw new Unauthorized('Password is incorrect!')
 
-      const token = generateToken({
-        userId: searchedUser[0].userId
-      })
+    const token = generateToken({
+      userId: searchedUser[0].userId
+    })
 
-      res.status(200).json({
-        token,
-        userDetails: {
-          name: searchedUser[0].name,
-          email,
-          avatar: searchedUser[0].avatar,
-          userId: searchedUser[0].id
-        }
-      })
-    }catch (e) {
-      console.log(e)
-        res.status(e.status||500).json({
-          error: e.status?e.message:e.toString()
-        })
-    }
+    res.status(200).json({
+      token,
+      userDetails: {
+        name: searchedUser[0].name,
+        email,
+        avatar: searchedUser[0].avatar,
+        userId: searchedUser[0].id
+      }
+    })
+  } catch (e) {
+    console.log(e)
+    res.status(e.status || 500).json({
+      error: e.status ? e.message : e.toString()
+    })
+  }
 }
 
-//delayed verification-user gets to verify his/her email in the second login!
+// delayed verification-user gets to verify his/her email in the second login!
 // exports.sendEmail = async (req, res) => {
 //     try {
 //       const { email } = req.body
@@ -189,7 +189,6 @@ exports.login = async (req, res) => {
 //       if (searchedUser[0].otp !== otp) throw new BadRequest('OTP doesn't match!')
 //       if (searchedUser[0].otp_expiry < new Date().getTime()) throw new BadRequest('OTP expired!')
 
-
 //       // await updateOne(connection, {
 //       //   tables: 'users',
 //       //   fields: 'emailVerified=?',
@@ -223,4 +222,3 @@ exports.login = async (req, res) => {
 //     })
 // }
 // }
-
