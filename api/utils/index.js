@@ -23,10 +23,7 @@ exports.verifyHash = (password, hash) => {
 }
 
 exports.verifyAccessToken = (token) => {
-  // return client.verifyIdToken({
-  //   idToken: token,
-  //   audience: process.env.CLIENT_ID
-  // })
+
   return new Promise((resolve,reject)=>{
   admin
   .auth()
@@ -41,7 +38,7 @@ exports.verifyAccessToken = (token) => {
     resolve(userRecord)
     })
   .catch((error) => {
-   console.log('Error fetching user data:', error);
+    reject(error)
   });
 })
   })
