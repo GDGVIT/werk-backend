@@ -1,6 +1,6 @@
-const Sequelize  = require("sequelize");
-const sequelize = require("../../config/db");
-const Session = require("./session");
+const Sequelize  = require('sequelize');
+const sequelize = require('../../config/db');
+const Session = require('./session');
 
 
 const Task = sequelize.define('task',{
@@ -25,32 +25,19 @@ const Task = sequelize.define('task',{
         type:Sequelize.INTEGER,
         allowNull:false
     },
-    //in mins
+    // in mins
     completionDuration:{
         type:Sequelize.INTEGER,
-        // allowNull:false
     },
-    // givenIn:{
-    //     type:Sequelize.INTEGER,
-    //     references:{
-    //         model:Session,
-    //         allowNull:false
-    //     }
-    // },
 
-    //completedDate in epoch time
+    // completedDate in epoch time
     submittedDate:{
         type:Sequelize.BIGINT,
-        // allowNull:false
     },
-
-    //createdDate in epoch time
     createdDate:{
         type:Sequelize.BIGINT,
         allowNull:false
     },
-
-
     // pointsExpected:{
     //     type:Sequelize.DOUBLE,
     //     allowNull:false

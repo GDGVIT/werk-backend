@@ -1,5 +1,5 @@
-const Sequelize  = require("sequelize");
-const sequelize = require("../../config/db");
+const Sequelize  = require('sequelize');
+const sequelize = require('../../config/db');
 const User = require('./user');
 const Session = require('./session');
 
@@ -18,7 +18,6 @@ const Participant = sequelize.define('participant',{
         type:Sequelize.BOOLEAN,
         default:false
     }
-
 },{
     timestamps:true
 })

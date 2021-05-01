@@ -8,7 +8,7 @@ const Session = sequelize.define('session',{
         primaryKey:true,
         autoIncrement:true
     },
-    //EPOCH TIME
+    // EPOCH TIME
     startTime:{
       type:Sequelize.BIGINT,
       allowNull:false
@@ -29,7 +29,6 @@ const Session = sequelize.define('session',{
         type:Sequelize.STRING,
         allowNull:false
     },
-    
 },{
     timestamps:true
 })

@@ -1,7 +1,7 @@
-const GroupChat = require("../models/chat")
-const Participant = require("../models/participant");
-const User = require("../models/user");
-const { BadRequest } = require("../utils/errors");
+const GroupChat = require('../models/chat')
+const Participant = require('../models/participant');
+const User = require('../models/user');
+const { BadRequest } = require('../utils/errors');
 exports.oldMessages = async (req,res)=>{
     try{
     const sId = req.params.id;
@@ -41,7 +41,7 @@ exports.oldMessages = async (req,res)=>{
                   })
             }
     }
-    //SENT TIME IS IN UTC TIME ZONE - EPOCH FORMAT
+    // SENT TIME IS IN UTC TIME ZONE - EPOCH FORMAT
     res.status(200).send({
         oldMessages:oldMessages
     })

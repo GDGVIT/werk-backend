@@ -1,6 +1,6 @@
-const Sequelize  = require("sequelize");
-const sequelize = require("../../config/db");
-require("dotenv").config();
+const Sequelize  = require('sequelize');
+const sequelize = require('../../config/db');
+require('dotenv').config();
 
 
 const User = sequelize.define('user',{

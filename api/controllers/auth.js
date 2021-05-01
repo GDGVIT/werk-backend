@@ -1,15 +1,14 @@
-const pool = require('../../config/db')
+
 const { BadRequest, Unauthorized } = require('../utils/errors')
-const { sendOTP } = require('../utils/email')
+// const { sendOTP } = require('../utils/email')
 const { generateToken, hashIt, verifyHash ,verifyAccessToken  } = require('../utils')
-const User = require("../models/user");
+const User = require('../models/user');
 
 require('dotenv').config()
 
 exports.googleAuth = async (req, res) => {
     try {
       const { accessToken } = req.body
-
       if (!accessToken) throw new BadRequest('ACCESS TOKEN NOT SPECIFIED')
       const user = await verifyAccessToken(accessToken)
       const searchedUser = await User.findOne({
@@ -20,7 +19,7 @@ exports.googleAuth = async (req, res) => {
       })
       if (!seachedUser) {
         const result =  await User.create({
-          name:user.displayName || "",
+          name:user.displayName || '',
           email:user.email,
           avatar: user.photoURL || process.envv.DEFAULT_AVATAR,
           emailVerified:true
@@ -41,7 +40,7 @@ exports.googleAuth = async (req, res) => {
         }
       })
   } catch (e) {
-    console.log("*************",e)
+    console.log(e);
     res.status(e.status||500).json({
       error:e.status?e.message:e.toString()
     })
@@ -87,15 +86,9 @@ exports.register = async (req, res) => {
       })
     }catch (e) {
     console.log(e)
-    if (e.status) {
-      res.status(e.status).json({
-        error: e.message
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
       })
-    } else {
-      res.status(500).json({
-        error: e.toString()
-      })
-    }
   }
 }
 
@@ -131,17 +124,11 @@ exports.login = async (req, res) => {
         }
       })
     }catch (e) {
-    console.log(e)
-    if (e.status) {
-      res.status(e.status).json({
-        error: e.message
-      })
-    } else {
-      res.status(500).json({
-        error: e.toString()
-      })
+      console.log(e)
+        res.status(e.status||500).json({
+          error: e.status?e.message:e.toString()
+        })
     }
-  }
 }
 
 //delayed verification-user gets to verify his/her email in the second login!
@@ -172,16 +159,10 @@ exports.login = async (req, res) => {
 //       })
 //   } catch (e) {
 //     console.log(e)
-//     if (e.status) {
-//       res.status(500).json({
-//         error: e.message
-//       })
-//     } else {
-//       res.status(500).json({
-//         error: e.toString()
-//       })
-//     }
-//   }
+//     res.status(e.status||500).json({
+//       error: e.status?e.message:e.toString()
+//     })
+// }
 // }
 
 // exports.verifyEmail = async (req, res) => {
@@ -205,7 +186,7 @@ exports.login = async (req, res) => {
 //       if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
 //       if (searchedUser[0].emailVerified) throw new BadRequest('Email is already verified!')
 
-//       if (searchedUser[0].otp !== otp) throw new BadRequest("OTP doesn't match!")
+//       if (searchedUser[0].otp !== otp) throw new BadRequest('OTP doesn't match!')
 //       if (searchedUser[0].otp_expiry < new Date().getTime()) throw new BadRequest('OTP expired!')
 
 
@@ -235,17 +216,11 @@ exports.login = async (req, res) => {
 //         // }
 //         message: 'Email Verified! Redirect user to login'
 //       })
-//   } catch (e) {
+//   }catch (e) {
 //     console.log(e)
-//     if (e.status) {
-//       res.status(e.status).json({
-//         error: e.message
-//       })
-//     } else {
-//       res.status(500).json({
-//         error: e.toString()
-//       })
-//     }
-//   }
+//     res.status(e.status||500).json({
+//       error: e.status?e.message:e.toString()
+//     })
+// }
 // }
 

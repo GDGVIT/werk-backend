@@ -1,11 +1,11 @@
 
-const { BadRequest } = require('../utils/errors')
+const { BadRequest, Unauthorized } = require('../utils/errors')
 const { sendAccessCode } = require('../utils/email')
 const crypto = require('crypto')
 const User = require('../models/user')
-const Session = require("../models/session")
-const Participant = require("../models/participant")
-const Task = require("../models/task")
+const Session = require('../models/session')
+const Participant = require('../models/participant')
+// const Task = require('../models/task')
 require('dotenv').config()
 
 exports.createSession = async (req, res) => {
@@ -48,15 +48,9 @@ exports.createSession = async (req, res) => {
       })
   } catch (e) {
     console.log(e)
-    if (e.status) {
-      res.status(e.status).json({
-        error: e.message
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
       })
-    } else {
-      res.status(500).json({
-        error: e.toString()
-      })
-    }
   }
 }
 
@@ -85,7 +79,7 @@ exports.joinSession = async (req, res) => {
         }
       })
 
-      if (participant.length === 0) throw new BadRequest('You have not been invited to this session')
+      if (participant.length === 0) throw new Unauthorized('You have not been invited to this session')
       if (participant[0].joined) throw new BadRequest('You have already joined this session')
 
       participant[0].joined = true;
@@ -95,15 +89,9 @@ exports.joinSession = async (req, res) => {
       })
   } catch (e) {
     console.log(e)
-    if (e.status) {
-      res.status(e.status).json({
-        error: e.message
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
       })
-    } else {
-      res.status(500).json({
-        error: e.toString()
-      })
-    }
   }
 }
 
@@ -125,15 +113,9 @@ exports.getSessions = async (req, res) => {
       })
   } catch (e) {
     console.log(e)
-    if (e.status) {
-      res.status(e.status).json({
-        error: e.message
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
       })
-    } else {
-      res.status(500).json({
-        error: e.toString()
-      })
-    }
   }
 }
 
@@ -143,22 +125,16 @@ exports.getParticipants = async (req, res) => {
       const participants = await session.getUsers()
       const users = participants.map(p=>{return {userId:p.userId,name:p.name,email:p.email,avatar:p.avatar,joined:p.participant.joined,
         points:p.participant.points,sessionId:p.participant.sId}})
-      if (users.findIndex(u => u.userId === req.user.userId) === -1) throw new BadRequest('you are not a participant of this session')
+      if (users.findIndex(u => u.userId === req.user.userId) === -1) throw new Unauthorized('you are not a participant of this session')
 
       res.status(200).json({
         participants: users.sort(function(a, b){return b.points-a.points})
       })
   } catch (e) {
     console.log(e)
-    if (e.status) {
-      res.status(e.status).json({
-        error: e.message
+      res.status(e.status||500).json({
+        error: e.status?e.message:e.toString()
       })
-    } else {
-      res.status(500).json({
-        error: e.toString()
-      })
-    }
   }
 }
 
