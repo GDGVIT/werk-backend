@@ -1,11 +1,14 @@
 const express = require('express')
 const app = express()
+
 const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const socket = require('socket.io')
 // const expressRL = require("express-rate-limiter");
 const dotenv = require('dotenv')
 const helmet = require('helmet')
+const {populateCreds} = require("./config/serviceAccount");
+populateCreds()
 const authRoutes = require('./api/routes/auth')
 const sessionRoutes = require('./api/routes/session')
 const taskRoutes = require('./api/routes/task')
@@ -67,7 +70,7 @@ User.hasMany(Task,{foreignKey:{name:'createdBy',allowNull:false}})
   sequelize.sync()
   .then(result=>{
 
-    const PORT = process.env.PORT || 3000
+  const PORT = process.env.PORT || 3000
   const server = app.listen(PORT, () => {
     console.log('server started at: ' + PORT)
   })
