@@ -11,7 +11,6 @@ exports.googleAuth = async (req, res) => {
       const { accessToken } = req.body
 
       if (!accessToken) throw new BadRequest('ACCESS TOKEN NOT SPECIFIED')
-
       const user = await verifyAccessToken(accessToken)
       const searchedUser = await User.findOne({
         attributes:{exclude:['password']},
@@ -42,7 +41,7 @@ exports.googleAuth = async (req, res) => {
         }
       })
   } catch (e) {
-    console.log(e)
+    console.log("*************",e)
     res.status(e.status||500).json({
       error:e.status?e.message:e.toString()
     })

@@ -23,28 +23,27 @@ exports.verifyHash = (password, hash) => {
 }
 
 exports.verifyAccessToken = (token) => {
-
   return new Promise((resolve,reject)=>{
+  console.log("hdfkajdfl")
   admin
   .auth()
   .verifyIdToken(token)
   .then((decodedToken) => {
-    console.log(decodedTokenToken)
     const uid = decodedToken.uid;
     admin
     .auth()
     .getUser(uid)
     .then((userRecord) => {
     resolve(userRecord)
+      })
+      .catch((error) => {
+        reject(error)
+      });
     })
-  .catch((error) => {
-    reject(error)
-  });
+      .catch((error) => {
+        reject(error)
+      });
 })
-  })
-  .catch((error) => {
-    reject(error)
-  });
 
 
 }
