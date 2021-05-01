@@ -6,16 +6,16 @@ const socket = require('socket.io')
 // const expressRL = require("express-rate-limiter");
 const dotenv = require('dotenv')
 const helmet = require('helmet')
-const {populateCreds} = require("./config/serviceAccount");
+const { populateCreds } = require('./config/serviceAccount')
 populateCreds()
 const authRoutes = require('./api/routes/auth')
 const sessionRoutes = require('./api/routes/session')
 const taskRoutes = require('./api/routes/task')
-const chatRoutes= require('./api/routes/chat')
+const chatRoutes = require('./api/routes/chat')
 const { verifyToken } = require('./api/utils')
 const sequelize = require('./config/db')
-const User = require('./api/models/user');
-const Session = require('./api/models/session');
+const User = require('./api/models/user')
+const Session = require('./api/models/session')
 const Participant = require('./api/models/participant')
 const GroupChat = require('./api/models/chat')
 const Task = require('./api/models/task')
@@ -45,117 +45,114 @@ app.use((req, res, next) => {
 // ROUTES
 app.use('/auth', authRoutes)
 app.use('/session', sessionRoutes)
-app.use('/chats',chatRoutes)
-app.use('/task',taskRoutes)
+app.use('/chats', chatRoutes)
+app.use('/task', taskRoutes)
 
-//associations
-Session.belongsTo(User,{foreignKey:{name:'createdBy',allowNull:false}})
-User.belongsToMany(Session,{through:Participant,foreignKey:'userId'})
-Session.belongsToMany(User,{through:Participant, foreignKey:'sId'})
-GroupChat.belongsTo(User,{foreignKey:{name:'sentBy',allowNull:false}})
-GroupChat.belongsTo(Session,{foreignKey:{name:'sentIn',allowNull:false}})
-Task.belongsTo(Session,{foreignKey:{name:'givenIn',allowNull:false},constraints: true})
-Task.belongsTo(User,{foreignKey:{name:'assignedTo'}})
-User.hasMany(Task,{foreignKey:{name:'createdBy',allowNull:false}})
+// associations
+Session.belongsTo(User, { foreignKey: { name: 'createdBy', allowNull: false } })
+User.belongsToMany(Session, { through: Participant, foreignKey: 'userId' })
+Session.belongsToMany(User, { through: Participant, foreignKey: 'sId' })
+GroupChat.belongsTo(User, { foreignKey: { name: 'sentBy', allowNull: false } })
+GroupChat.belongsTo(Session, { foreignKey: { name: 'sentIn', allowNull: false } })
+Task.belongsTo(Session, { foreignKey: { name: 'givenIn', allowNull: false }, constraints: true })
+Task.belongsTo(User, { foreignKey: { name: 'assignedTo' } })
+User.hasMany(Task, { foreignKey: { name: 'createdBy', allowNull: false } })
 
 // syncing tables
 sequelize.sync()
-  .then(result=>{
+  .then(result => {
     const PORT = process.env.PORT || 3000
     const server = app.listen(PORT, () => {
       console.log('server started at: ' + PORT)
     })
 
-  // initialization of socket with cors config
+    // initialization of socket with cors config
     const io = socket(server, {
       cors: {
-       origin: '*',
-       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        origin: '*',
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         preflightContinue: false
       }
     })
 
     io.on('connection', async (socket) => {
-          let user = null;
-          let session = null;
-          let currentRoom = null;
-        // in app are we gonna disconnect the socket when he moves to different screen ?? - if no then seperate everything which is kept inside!!
-          console.log("connected!")
-          // INITIALIZATION OF THE USER!
-          socket.on('initialize', async (data) => {
-            if(!user){
-              if (!data.token){
-                console.log('token not passed!!!')
-                return
-              }
-                console.log("initialized")
-                user = verifyToken(data.token)
-            }
-          else console.log("already intialized!!")
-          })
+      let user = null
+      let session = null
+      let currentRoom = null
+      // in app are we gonna disconnect the socket when he moves to different screen ?? - if no then seperate everything which is kept inside!!
+      console.log('connected!')
+      // INITIALIZATION OF THE USER!
+      socket.on('initialize', async (data) => {
+        if (!user) {
+          if (!data.token) {
+            console.log('token not passed!!!')
+            return
+          }
+          console.log('initialized')
+          user = verifyToken(data.token)
+        } else console.log('already intialized!!')
+      })
 
-          //MESSAGE SENT!
-          socket.on('message', async (messageData) => {
-            if(!user){ console.log('USER IS NOT AUTHENTICATED!');return}
-            if(!session){ console.log('USER DINDT JOIN ANY SESSION YET');return}
-              if(messageData.message){
-                socket.to(currentRoom).emit('message', messageData)
-                let date = new Date();
-                //this epoch time is of utc standard
-                await GroupChat.create({
-                    message:messageData.message,
-                    sentBy:user.userId,
-                    sentIn:session,
-                    sentTime:date.getTime()
-                })
-              }else{
-                console.log("nothing is sent in the message Data!")
-              }
+      // MESSAGE SENT!
+      socket.on('message', async (messageData) => {
+        if (!user) { console.log('USER IS NOT AUTHENTICATED!'); return }
+        if (!session) { console.log('USER DINDT JOIN ANY SESSION YET'); return }
+        if (messageData.message) {
+          socket.to(currentRoom).emit('message', messageData)
+          const date = new Date()
+          // this epoch time is of utc standard
+          await GroupChat.create({
+            message: messageData.message,
+            sentBy: user.userId,
+            sentIn: session,
+            sentTime: date.getTime()
           })
+        } else {
+          console.log('nothing is sent in the message Data!')
+        }
+      })
 
-          //JOINING A SESSION
-          socket.on('joinSession', async (data) => {
-            // data contains sessionID
-            if(session){
-              console.log('didnt leave the prev session yet')
-              return
-            }
-            if (!data.session || !user){
-              console.log('session ID not passed','user: '+user)
-              return
-            }
-  
-              session = data.session;
-              const participant = await Participant.findAll({
-                where:{
-                  userId:user.userId,
-                  sId:data.session,
-                  joined:true
-                }
-              })
-              console.log(participant.length)
-              if (participant.length === 0) {
-                console.log("user is not in the session")
-                return
-              }
-                const currentRoom = `session-${session}`
-                socket.join(currentRoom)
-                console.log("joined room: "+currentRoom);
-          })
+      // JOINING A SESSION
+      socket.on('joinSession', async (data) => {
+        // data contains sessionID
+        if (session) {
+          console.log('didnt leave the prev session yet')
+          return
+        }
+        if (!data.session || !user) {
+          console.log('session ID not passed', 'user: ' + user)
+          return
+        }
 
-          socket.on('leaveSession', () => {
-            if(session==null){
-              console.log("NOT IN ANY SESSION")
-              return
-            }
-            socket.leave(currentRoom);
-            currentRoom=null;
-            sessoin=null;
-            console.log('user left the session')
-          })
+        session = data.session
+        const participant = await Participant.findAll({
+          where: {
+            userId: user.userId,
+            sId: data.session,
+            joined: true
+          }
+        })
+        console.log(participant.length)
+        if (participant.length === 0) {
+          console.log('user is not in the session')
+          return
+        }
+        const currentRoom = `session-${session}`
+        socket.join(currentRoom)
+        console.log('joined room: ' + currentRoom)
+      })
 
+      socket.on('leaveSession', () => {
+        if (session == null) {
+          console.log('NOT IN ANY SESSION')
+          return
+        }
+        socket.leave(currentRoom)
+        currentRoom = null
+        session = null
+        console.log('user left the session')
+      })
     })
-  }).catch(e=>{
+  }).catch(e => {
     console.log(e)
   })
-  
