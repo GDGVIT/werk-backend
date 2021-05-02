@@ -247,15 +247,27 @@ exports.getTasks = async (req, res) => {
     const tasks = await Task.findAll({
       where: {
         givenIn: sessionId
-      }
+      },
+      include: [
+        {
+          model: User,
+          as: 'assigned',
+          attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] }
+        },
+        {
+          model: User,
+          as: 'creator',
+          attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] }
+        }
+      ]
     })
 
     console.log(tasks)
 
-    for (let i = 0; i <= tasks.length - 1; i++) {
-      tasks[i].assignedTo = await tasks[i].getUser({ attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
-      tasks[i].createdBy = await User.findOne({ where: { userId: tasks[i].createdBy }, attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
-    }
+    // for (let i = 0; i <= tasks.length - 1; i++) {
+    //   tasks[i].assignedTo = await tasks[i].getUser({ attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
+    //   tasks[i].createdBy = await User.findOne({ where: { userId: tasks[i].createdBy }, attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
+    // }
 
     res.status(200).json({
       tasks
@@ -287,13 +299,20 @@ exports.getTasksAssigned = async (req, res) => {
       where: {
         givenIn: sessionId,
         assignedTo: req.user.userId
-      }
+      },
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] }
+        }
+      ]
     })
 
-    for (let i = 0; i <= tasks.length - 1; i++) {
-      tasks[i].assignedTo = await tasks[i].getUser({ attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
-      tasks[i].createdBy = await User.findOne({ where: { userId: tasks[i].createdBy }, attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
-    }
+    // for (let i = 0; i <= tasks.length - 1; i++) {
+    //   tasks[i].assignedTo = await tasks[i].getUser({ attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
+    //   tasks[i].createdBy = await User.findOne({ where: { userId: tasks[i].createdBy }, attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
+    // }
     res.status(200).json({
       tasks
     })

@@ -38,7 +38,7 @@ exports.sendAccessCode = async (accessCode, email, sender) => {
     from: process.env.WERK_EMAIL,
     to: email,
     subject: 'Access code for the sessions',
-    text: `User ${sender} has invited you to join a session. Please provide this accessCode: ${accessCode} for joining the session`
+    text: `${sender.toUpperCase()} has invited you to join a session in werk app. Please use this accessCode: ${accessCode} for joining the session`
   }
 
   return new Promise((resolve, reject) => {

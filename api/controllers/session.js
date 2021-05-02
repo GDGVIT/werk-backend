@@ -14,10 +14,15 @@ exports.createSession = async (req, res) => {
     const { startTime, endTime, taskCreationByAll, taskAssignByAll, participants } = req.body
     if (!startTime || !endTime || !taskCreationByAll || !taskAssignByAll || !participants.length) throw new BadRequest('All required fields are not provided')
     const accessCode = crypto.randomBytes(5).toString('hex')
+
+    const participantsFiltered = participants.filter(p => p !== req.user.email)
+
+    if (!participantsFiltered.length) throw new BadRequest('Don\'t give your own email while creation of session')
+
     const result = await User.findAll({
       attributes: ['userId', 'email'],
       where: {
-        email: participants
+        email: participantsFiltered
       }
     })
     if (!result.length) throw new BadRequest('Provided emails are not registered with any of our user')
@@ -32,13 +37,18 @@ exports.createSession = async (req, res) => {
     })
 
     result.splice(0, 0, req.user)
-
+    const participantsArray = []
     result.forEach(async (p, i) => {
-      await Participant.create({
+      participantsArray.push({
         sId: session.sessionId,
         userId: p.userId,
         joined: i === 0
       })
+    })
+
+    await Participant.bulkCreate(participantsArray)
+
+    result.forEach(async (p, i) => {
       if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name)
     })
 
@@ -98,11 +108,21 @@ exports.getSessions = async (req, res) => {
   try {
     const user = req.user
     const sessions = await user.getSessions()
-    console.log(await sessions[0].getUser({ attributes: ['name', 'email', 'avatar'] }))
+    const users = await User.findAll({
+      where: {
+        userId: sessions.map(s => s.createdBy)
+      },
+      attributes: ['userId', 'name', 'email', 'avatar']
+    })
+    const creators = {}
+    users.forEach(u => {
+      creators[u.userId] = u
+    })
     const sessionWithUser = []
     for (let i = 0; i <= sessions.length - 1; i++) {
       if (sessions[i].participant.joined) {
-        sessions[i].createdBy = await sessions[i].getUser({ attributes: ['name', 'email', 'avatar'] })
+        // sessions[i].createdBy = await sessions[i].getUser({ attributes: ['name', 'email', 'avatar'] })
+        sessions[i].createdBy = creators[sessions[i].createdBy]
         delete sessions[i].dataValues.participant
         sessionWithUser.push(sessions[i])
       }

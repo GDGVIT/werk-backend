@@ -52,11 +52,11 @@ app.use('/task', taskRoutes)
 Session.belongsTo(User, { foreignKey: { name: 'createdBy', allowNull: false } })
 User.belongsToMany(Session, { through: Participant, foreignKey: 'userId' })
 Session.belongsToMany(User, { through: Participant, foreignKey: 'sId' })
-GroupChat.belongsTo(User, { foreignKey: { name: 'sentBy', allowNull: false } })
+GroupChat.belongsTo(User, { foreignKey: { name: 'sentBy', allowNull: false }, as: 'sender' })
 GroupChat.belongsTo(Session, { foreignKey: { name: 'sentIn', allowNull: false } })
-Task.belongsTo(Session, { foreignKey: { name: 'givenIn', allowNull: false }, constraints: true })
-Task.belongsTo(User, { foreignKey: { name: 'assignedTo' } })
-User.hasMany(Task, { foreignKey: { name: 'createdBy', allowNull: false } })
+Task.belongsTo(Session, { foreignKey: { name: 'givenIn', allowNull: false } })
+Task.belongsTo(User, { foreignKey: { name: 'assignedTo' }, as: 'assigned' })
+Task.belongsTo(User, { foreignKey: { name: 'createdBy', allowNull: false }, as: 'creator' })
 
 // syncing tables
 sequelize.sync()
@@ -100,7 +100,7 @@ sequelize.sync()
         if (messageData.message) {
           socket.to(currentRoom).emit('message', messageData)
           const date = new Date()
-          // this epoch time is of utc standard
+          // this epoch time is of utc standard --- UTC TIME ZONE!
           await GroupChat.create({
             message: messageData.message,
             sentBy: user.userId,
@@ -142,6 +142,7 @@ sequelize.sync()
         console.log('joined room: ' + currentRoom)
       })
 
+      // leave a session
       socket.on('leaveSession', () => {
         if (session == null) {
           console.log('NOT IN ANY SESSION')
