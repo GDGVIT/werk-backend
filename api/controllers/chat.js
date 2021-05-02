@@ -19,7 +19,8 @@ exports.oldMessages = async (req, res) => {
         model: User,
         attributes: {
           exclude: ['password', 'otp', 'otpExpiry', 'emailVerified']
-        }
+        },
+        as: 'sender'
       },
       where: {
         sentIn: sId
@@ -27,19 +28,15 @@ exports.oldMessages = async (req, res) => {
     })
 
     const oldMessages = []
-    let sender = null
 
     for (let i = 0; i <= messages.length - 1; i++) {
-      sender = await User.findOne({ where: { userId: messages[i].sentBy }, attributes: { exclude: ['password', 'emailVerified', 'otp', 'otpExpiry'] } })
-      if (sender.name) {
-        oldMessages.push({
-          messageId: messages[i].messageId,
-          message: messages[i].message,
-          sentTime: messages[i].sentTime,
-          sentBy: sender,
-          sender: messages[i].sentBy === req.user.userId
-        })
-      }
+      oldMessages.push({
+        messageId: messages[i].messageId,
+        message: messages[i].message,
+        sentTime: messages[i].sentTime,
+        sentBy: messages[i].sender,
+        sender: messages[i].sentBy === req.user.userId
+      })
     }
     // SENT TIME IS IN UTC TIME ZONE - EPOCH FORMAT
     res.status(200).send({
