@@ -79,6 +79,7 @@ sequelize.sync()
       let user = null
       let session = null
       let currentRoom = null
+      let userId = null
       // in app are we gonna disconnect the socket when he moves to different screen ?? - if no then seperate everything which is kept inside!!
       console.log('connected!')
       // INITIALIZATION OF THE USER!
@@ -89,7 +90,15 @@ sequelize.sync()
             return
           }
           console.log('initialized')
-          user = verifyToken(data.token)
+          userId = verifyToken(data.token)
+          user = await User.findAll({
+            where: {
+              userId
+            },
+            attributes: {
+              exclude: ['password', 'emailVerified', 'otpExpiry', 'otp']
+            }
+          })
         } else console.log('already intialized!!')
       })
 
@@ -98,8 +107,16 @@ sequelize.sync()
         if (!user) { console.log('USER IS NOT AUTHENTICATED!'); return }
         if (!session) { console.log('USER DINDT JOIN ANY SESSION YET'); return }
         if (messageData.message) {
-          socket.to(currentRoom).emit('message', messageData)
           const date = new Date()
+          socket.to(currentRoom).emit('message', {
+            ...messageData,
+            sentBy: {
+              userId: user[0].userId,
+              avatar: user[0].avatar,
+              name: user[0].name
+            },
+            sentTime: date.getTime()
+          })
           // this epoch time is of utc standard --- UTC TIME ZONE!
           await GroupChat.create({
             message: messageData.message,
