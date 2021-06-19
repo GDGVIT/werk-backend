@@ -3,7 +3,7 @@ const { BadRequest, Unauthorized } = require('../utils/errors')
 // const { sendOTP } = require('../utils/email')
 const { generateToken, hashIt, verifyHash, verifyAccessToken } = require('../utils')
 const User = require('../models/user')
-
+const validator = require('validator')
 require('dotenv').config()
 
 exports.googleAuth = async (req, res) => {
@@ -64,6 +64,10 @@ exports.register = async (req, res) => {
     if (searchedUser.length) { throw new BadRequest('Email is already registered!') }
 
     const hashedPassword = await hashIt(password)
+
+    if (!validator.isEmail(email)) throw new BadRequest('Email format is incorrect')
+
+    if (password.length < 5) throw new BadRequest('Password must have more than 5 chars')
 
     const user = await User.create({
       name,

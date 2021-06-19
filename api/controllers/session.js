@@ -11,8 +11,8 @@ require('dotenv').config()
 exports.createSession = async (req, res) => {
   try {
     // start and end time are in epoch format
-    const { startTime, endTime, taskCreationByAll, taskAssignByAll, participants } = req.body
-    if (!startTime || !endTime || !taskCreationByAll || !taskAssignByAll || !participants.length) throw new BadRequest('All required fields are not provided')
+    const { startTime, endTime, taskCreationByAll, taskAssignByAll, participants, name, description } = req.body
+    if (!name || !description || !startTime || !endTime || !taskCreationByAll || !taskAssignByAll || !participants.length) throw new BadRequest('All required fields are not provided')
     const accessCode = crypto.randomBytes(5).toString('hex')
 
     const participantsFiltered = participants.filter(p => p !== req.user.email)
@@ -28,6 +28,8 @@ exports.createSession = async (req, res) => {
     if (!result.length) throw new BadRequest('Provided emails are not registered with any of our user')
 
     const session = await Session.create({
+      sessionName: name,
+      sessionDescription: description,
       startTime,
       endTime,
       createdBy: req.user.userId,

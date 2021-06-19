@@ -7,6 +7,15 @@ const Session = sequelize.define('session', {
     primaryKey: true,
     autoIncrement: true
   },
+
+  sessionName: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  sessionDescription: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
   // EPOCH TIME
   startTime: {
     type: Sequelize.BIGINT,
