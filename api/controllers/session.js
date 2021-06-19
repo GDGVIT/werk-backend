@@ -121,12 +121,18 @@ exports.getSessions = async (req, res) => {
       creators[u.userId] = u
     })
     const sessionWithUser = []
+    let participants = null
     for (let i = 0; i <= sessions.length - 1; i++) {
       if (sessions[i].participant.joined) {
-        // sessions[i].createdBy = await sessions[i].getUser({ attributes: ['name', 'email', 'avatar'] })
+        participants = await sessions[i].getUsers()
+        participants = participants.map(p => { return { name: p.name, email: p.email, avatar: p.avatar } })
         sessions[i].createdBy = creators[sessions[i].createdBy]
         delete sessions[i].dataValues.participant
-        sessionWithUser.push(sessions[i])
+        sessionWithUser.push({
+          session: sessions[i],
+          participants: participants.filter((p, i) => i <= 2),
+          participantsCount: participants.length
+        })
       }
     }
     res.status(200).json({
@@ -144,7 +150,7 @@ exports.getParticipants = async (req, res) => {
   try {
     const session = await Session.findByPk(req.params.id)
     const participants = await session.getUsers()
-    const users = participants.map(p => {
+    let users = participants.map(p => {
       return {
         userId: p.userId,
         name: p.name,
@@ -155,10 +161,16 @@ exports.getParticipants = async (req, res) => {
         sessionId: p.participant.sId
       }
     })
-    if (users.findIndex(u => u.userId === req.user.userId) === -1) throw new Unauthorized('you are not a participant of this session')
+    users = users.sort(function (a, b) { return b.points - a.points })
+
+    const index = users.findIndex(u => u.userId === req.user.userId)
+
+    if (index === -1) throw new Unauthorized('you are not a participant of this session')
 
     res.status(200).json({
-      participants: users.sort(function (a, b) { return b.points - a.points })
+      user: users[index],
+      rank: index + 1,
+      participants: users
     })
   } catch (e) {
     console.log(e)
