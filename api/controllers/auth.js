@@ -62,8 +62,6 @@ exports.register = async (req, res) => {
       }
     })
 
-    console.log(searchedUser)
-
     if (searchedUser.length) { throw new BadRequest('Email is already registered!') }
 
     const hashedPassword = await hashIt(password)
@@ -82,6 +80,7 @@ exports.register = async (req, res) => {
       userId: user.userId
     })
 
+    await sendVerificationLink(user)
     res.status(200).json({
       token,
       userDetails: {
