@@ -122,7 +122,7 @@ exports.getSessions = async (req, res) => {
         attributes: ['userId', 'name', 'email', 'avatar']
       })
       participants = participants.filter(p => { return p.participant.joined === true })
-      participants = participants.map(p => { return { name: p.name, email: p.email, avatar: p.avatar }})
+      participants = participants.map(p => { return { name: p.name, email: p.email, avatar: p.avatar } })
       data.push({
         session: sessions[x],
         participants: participants.filter((p, i) => i <= 2),
@@ -150,7 +150,7 @@ exports.getParticipants = async (req, res) => {
         name: p.name,
         email: p.email,
         avatar: p.avatar,
-        joined: p.participant.joined === 1,
+        joined: p.participant.joined,
         points: p.participant.points,
         sessionId: p.participant.sId
       }
