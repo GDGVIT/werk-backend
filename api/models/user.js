@@ -28,15 +28,17 @@ const User = sequelize.define('user', {
   emailVerified: {
     type: Sequelize.BOOLEAN,
     // we can later implement the verification route
-    defaultValue: true
+    defaultValue: false
   },
   otpExpiry: {
     type: Sequelize.BIGINT
   },
   otp: {
     type: Sequelize.STRING
+  },
+  verificationCode: {
+    type: Sequelize.STRING
   }
-
 }, {
   timestamps: true
 })

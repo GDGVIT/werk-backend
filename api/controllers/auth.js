@@ -4,7 +4,10 @@ const { BadRequest, Unauthorized } = require('../utils/errors')
 const { generateToken, hashIt, verifyHash, verifyAccessToken } = require('../utils')
 const User = require('../models/user')
 const validator = require('validator')
+const { sendVerificationLink, passwordResetCode } = require('../utils/email')
 require('dotenv').config()
+const crypto = require('crypto')
+// const path = require('path')
 
 exports.googleAuth = async (req, res) => {
   try {
@@ -134,94 +137,136 @@ exports.login = async (req, res) => {
   }
 }
 
-// delayed verification-user gets to verify his/her email in the second login!
-// exports.sendEmail = async (req, res) => {
-//     try {
-//       const { email } = req.body
+exports.sendEmail = async (req, res) => {
+  try {
+    const { email } = req.body
 
-//       // const searchedUser = await getOne(connection, {
-//       //   fields: 'email, emailVerified',
-//       //   tables: 'users',
-//       //   conditions: 'email=?',
-//       //   values: [email]
-//       // })
-//       const searchedUser = await User.findAll({
-//         attributes:{
-//           exclude:['password']
-//         },
-//         where:{
-//           email:email
-//         }
-//       })
-//       if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
-//       if (searchedUser[0].emailVerified) throw new BadRequest('Email is already verified!')
+    if (!email) throw new BadRequest('Email is not provided!')
 
-//       const result = await sendOTP(searchedUser[0])
-//       res.status(200).json({
-//         message: result
-//       })
-//   } catch (e) {
-//     console.log(e)
-//     res.status(e.status||500).json({
-//       error: e.status?e.message:e.toString()
-//     })
-// }
-// }
+    const searchedUser = await User.findAll({
+      attributes: {
+        exclude: ['password']
+      },
+      where: {
+        email: email
+      }
+    })
+    if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
+    if (searchedUser[0].emailVerified) throw new BadRequest('Email is already verified!')
 
-// exports.verifyEmail = async (req, res) => {
-//     try {
-//       const { email, otp } = req.body
+    await sendVerificationLink(searchedUser[0])
+    res.status(200).json({
+      message: 'successfully sent the mail'
+    })
+  } catch (e) {
+    console.log(e)
+    res.status(e.status || 500).json({
+      error: e.status ? e.message : e.toString()
+    })
+  }
+}
 
-//       // const searchedUser = await getOne(connection, {
-//       //   fields: 'userId, email, name, avatar, password,otp,otp_expiry,emailVerified',
-//       //   tables: 'users',
-//       //   conditions: 'email=? ',
-//       //   values: [email]
-//       // })
-//       const searchedUser = await User.findAll({
-//         attributes:{
-//           exclude:['password']
-//         },
-//         where:{
-//           email:email
-//         }
-//       })
-//       if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
-//       if (searchedUser[0].emailVerified) throw new BadRequest('Email is already verified!')
+exports.verifyEmail = async (req, res) => {
+  try {
+    const verificationCode = req.params.code
+    const searchedUser = await User.findAll({
+      attributes: {
+        exclude: ['password']
+      },
+      where: {
+        verificationCode
+      }
+    })
+    if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
+    if (searchedUser[0].emailVerified) throw new BadRequest('EMAIL IS ALREADY REGISTERED!')
 
-//       if (searchedUser[0].otp !== otp) throw new BadRequest('OTP doesn't match!')
-//       if (searchedUser[0].otp_expiry < new Date().getTime()) throw new BadRequest('OTP expired!')
+    searchedUser[0].emailVerified = true
+    await searchedUser[0].save()
 
-//       // await updateOne(connection, {
-//       //   tables: 'users',
-//       //   fields: 'emailVerified=?',
-//       //   conditions: 'email=?',
-//       //   values: [1, email]
-//       // })
+    res.status(200).send('<h3 style="text-align:center"> EMAIL REGISTERED! </h3>')
+  } catch (e) {
+    console.log(e)
+    // just send 404 page!
+    res.status(e.status || 500).send(`<h2 style="text-align:center"> ${e.status ? e.message : 'INTERNAL SERVER ERROR'} </h2>`)
+  }
+}
 
-//       searchedUser[0].emailVerified=true;
-//       await searchedUser[0].save();
+exports.sendResetPasswordLink = async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) throw new BadRequest('Email is not provided!')
+    const searchedUser = await User.findAll({
+      attributes: {
+        exclude: ['password']
+      },
+      where: {
+        email: email
+      }
+    })
+    if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
+    await passwordResetCode(crypto.randomBytes(5).toString('hex'), email, searchedUser[0])
+    res.status(200).json({
+      message: 'successfully sent the email'
+    })
+  } catch (e) {
+    console.log(e)
+    res.status(e.status || 500).json({
+      error: e.status ? e.message : e.toString()
+    })
+  }
+}
 
-//       // const token = generateToken({
-//       //     userId: searchedUser[0].userId,
-//       //     name: searchedUser[0].name,
-//       //     email: searchedUser[0].email,
-//       // });
+exports.changePasswordPage = async (req, res) => {
+  try {
+    const otp = req.params.otp
+    console.log(otp)
+    const searchedUser = await User.findAll({
+      attributes: {
+        exclude: ['password']
+      },
+      where: {
+        otp
+      }
+    })
+    if (!searchedUser.length) throw new BadRequest('INVALID CODE')
 
-//       res.status(200).json({
-//         // token,
-//         // userDetails:{
-//         //     name:searchedUser[0].name,
-//         //     email,
-//         //     avatar:searchedUser[0].avatar,
-//         //     userId:searchedUser[0].id
-//         // }
-//         message: 'Email Verified! Redirect user to login'
-//       })
-//   }catch (e) {
-//     console.log(e)
-//     res.status(e.status||500).json({
-//       error: e.status?e.message:e.toString()
-//     })
-// }
-// }
+    const currentTime = new Date().getTime()
+
+    if (searchedUser[0].otpExpiry < currentTime) throw new BadRequest('LINK EXPIRED')
+
+    res.render('changePassword', { url: `${process.env.TESTING ? process.env.LOCAL_URL : process.env.URL}/auth/changePassword`, userId: searchedUser[0].userId })
+    // res.status(200).sendFile(changePasswordPage({ url: `${process.env.TESTING ? process.env.LOCAL_URL : process.env.URL}/auth/changePassword`, userId: searchedUser[0].userId }))
+  } catch (e) {
+    console.log(e)
+    res.status(404).send()
+  }
+}
+
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = Object.keys(req.body)[0]
+    const password = Object.values(req.body)[0]
+    const searchedUser = await User.findAll({
+      attributes: {
+        exclude: ['password']
+      },
+      where: {
+        userId
+      }
+    })
+    if (!searchedUser.length) throw new BadRequest('Invalid User')
+    const hashedPassword = await hashIt(password)
+
+    searchedUser[0].password = hashedPassword
+
+    searchedUser[0].otpExpiry = new Date().getTime()
+
+    await searchedUser[0].save()
+
+    res.status(200).render('generalMessage', { message: 'Successfully changed the password!' })
+  } catch (e) {
+    console.log(e)
+    // send some html response!
+    res.status(400).send()
+  }
+}

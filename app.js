@@ -12,6 +12,7 @@ const authRoutes = require('./api/routes/auth')
 const sessionRoutes = require('./api/routes/session')
 const taskRoutes = require('./api/routes/task')
 const chatRoutes = require('./api/routes/chat')
+const userRoutes = require('./api/routes/user')
 const { verifyToken } = require('./api/utils')
 const sequelize = require('./config/db')
 const User = require('./api/models/user')
@@ -19,8 +20,11 @@ const Session = require('./api/models/session')
 const Participant = require('./api/models/participant')
 const GroupChat = require('./api/models/chat')
 const Task = require('./api/models/task')
+const path = require('path')
 dotenv.config()
-
+app.set('views', path.join(__dirname, 'api', 'views'))
+app.set('view engine', 'ejs')
+app.use(express.static(path.join(__dirname, 'api', 'public')))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 
@@ -47,6 +51,7 @@ app.use('/auth', authRoutes)
 app.use('/session', sessionRoutes)
 app.use('/chats', chatRoutes)
 app.use('/task', taskRoutes)
+app.use('/user', userRoutes)
 
 // associations
 Session.belongsTo(User, { foreignKey: { name: 'createdBy', allowNull: false } })
@@ -59,7 +64,9 @@ Task.belongsTo(User, { foreignKey: { name: 'assignedTo' }, as: 'assigned' })
 Task.belongsTo(User, { foreignKey: { name: 'createdBy', allowNull: false }, as: 'creator' })
 
 // syncing tables
-sequelize.sync()
+sequelize.sync({
+  force: process.env.FORCE === 'true'
+})
   .then(result => {
     const PORT = process.env.PORT || 3000
     const server = app.listen(PORT, () => {

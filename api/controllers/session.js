@@ -109,34 +109,28 @@ exports.joinSession = async (req, res) => {
 exports.getSessions = async (req, res) => {
   try {
     const user = req.user
-    const sessions = await user.getSessions()
-    const users = await User.findAll({
-      where: {
-        userId: sessions.map(s => s.createdBy)
-      },
-      attributes: ['userId', 'name', 'email', 'avatar']
-    })
-    const creators = {}
-    users.forEach(u => {
-      creators[u.userId] = u
-    })
-    const sessionWithUser = []
+    let sessions = await user.getSessions()
+    sessions = sessions.filter(s => s.participant.joined === true)
+    const data = []
     let participants = null
-    for (let i = 0; i <= sessions.length - 1; i++) {
-      if (sessions[i].participant.joined) {
-        participants = await sessions[i].getUsers()
-        participants = participants.map(p => { return { name: p.name, email: p.email, avatar: p.avatar } })
-        sessions[i].createdBy = creators[sessions[i].createdBy]
-        delete sessions[i].dataValues.participant
-        sessionWithUser.push({
-          session: sessions[i],
-          participants: participants.filter((p, i) => i <= 2),
-          participantsCount: participants.length
-        })
-      }
+    for (const x in sessions) {
+      sessions[x].createdBy = await sessions[x].getUser({
+        attributes: ['userId', 'name', 'email', 'avatar']
+      })
+      delete sessions[x].dataValues.participant
+      participants = await sessions[x].getUsers({
+        attributes: ['userId', 'name', 'email', 'avatar']
+      })
+      participants = participants.filter(p => { return p.participant.joined === true })
+      participants = participants.map(p => { return { name: p.name, email: p.email, avatar: p.avatar }})
+      data.push({
+        session: sessions[x],
+        participants: participants.filter((p, i) => i <= 2),
+        participantsCount: participants.length
+      })
     }
     res.status(200).json({
-      sessions: sessionWithUser
+      sessions: data
     })
   } catch (e) {
     console.log(e)
@@ -156,7 +150,7 @@ exports.getParticipants = async (req, res) => {
         name: p.name,
         email: p.email,
         avatar: p.avatar,
-        joined: p.participant.joined,
+        joined: p.participant.joined === 1,
         points: p.participant.points,
         sessionId: p.participant.sId
       }
