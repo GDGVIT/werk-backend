@@ -182,7 +182,7 @@ exports.verifyEmail = async (req, res) => {
     searchedUser[0].emailVerified = true
     await searchedUser[0].save()
 
-    res.status(200).send('<h3 style="text-align:center"> EMAIL REGISTERED! </h3>')
+    res.status(200).send('<h3 style="text-align:center"> Email Verified! </h3>')
   } catch (e) {
     console.log(e)
     // just send 404 page!

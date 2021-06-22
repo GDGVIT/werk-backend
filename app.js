@@ -65,7 +65,8 @@ Task.belongsTo(User, { foreignKey: { name: 'createdBy', allowNull: false }, as: 
 
 // syncing tables
 sequelize.sync({
-  force: process.env.FORCE === 'true'
+  // force: process.env.FORCE === 'true',
+  alter: process.env.ALTER_SEQUELIZE === 'true'
 })
   .then(result => {
     const PORT = process.env.PORT || 3000

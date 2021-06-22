@@ -5,6 +5,7 @@ const crypto = require('crypto')
 const User = require('../models/user')
 const Session = require('../models/session')
 const Participant = require('../models/participant')
+const { generateQRCode } = require('../utils')
 // const Task = require('../models/task')
 require('dotenv').config()
 
@@ -27,6 +28,8 @@ exports.createSession = async (req, res) => {
     })
     if (!result.length) throw new BadRequest('Provided emails are not registered with any of our user')
 
+    const data = await generateQRCode(accessCode)
+
     const session = await Session.create({
       sessionName: name,
       sessionDescription: description,
@@ -35,7 +38,8 @@ exports.createSession = async (req, res) => {
       createdBy: req.user.userId,
       taskCreationUniv: taskCreationByAll,
       taskAssignUniv: taskAssignByAll,
-      accessCode
+      accessCode,
+      qrCode: data.Location
     })
 
     result.splice(0, 0, req.user)

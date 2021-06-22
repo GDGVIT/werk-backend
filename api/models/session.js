@@ -36,6 +36,10 @@ const Session = sequelize.define('session', {
   accessCode: {
     type: Sequelize.STRING,
     allowNull: false
+  },
+  qrCode: {
+    type: Sequelize.STRING,
+    allowNull: false
   }
 }, {
   timestamps: true
