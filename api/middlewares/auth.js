@@ -4,7 +4,7 @@ const User = require('../models/user')
 
 const authMiddleware = async (req, res, next) => {
   try {
-    if (!req.headers.authorization) throw new Unauthorized('PLEASE LOGIN! NO AUTH TOKEN')
+    if (!req.headers.authorization) throw new Unauthorized('PLEASE LOGIN! NO AUTH TOKEN ')
 
     const token = req.headers.authorization.replace('Bearer ', '')
     const user = verifyToken(token)

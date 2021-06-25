@@ -21,13 +21,15 @@ exports.sendVerificationLink = async (user) => {
   return sendEmail(mailOptions)
 }
 
-exports.sendAccessCode = async (accessCode, email, sender) => {
+exports.sendAccessCode = async (accessCode, email, sender, location) => {
   const mailOptions = {
     from: process.env.WERK_EMAIL,
     to: email,
     subject: 'Access code for the sessions',
     html: `<p>${sender.toUpperCase()} has invited you to join a session in werk app. </p>
-          <p>Please use this accessCode: ${accessCode} for joining the session </p>`
+          <p>Please use this accessCode: ${accessCode} for joining the session </p>
+          <p>You can also scan the following qr code from our app, to join the session.</p>
+          <img src="${location}" alt="img" width="200" height="200"/>`
   }
 
   return sendEmail(mailOptions)

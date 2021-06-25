@@ -15,3 +15,20 @@ exports.uploadFile = async (filename, body, bucket) => {
     })
   })
 }
+
+exports.deleteFile = async (bucket, url) => {
+  const params = {
+    Bucket: bucket,
+    Key: 'WERK/' + url.split('/WERK/')[1]
+  }
+  console.log(params)
+  return new Promise((resolve, reject) => {
+    s3.deleteObject(params, function (err, data) {
+      if (err) reject(err)
+      else {
+        // console.log(data)
+        resolve(data)
+      }
+    })
+  })
+}

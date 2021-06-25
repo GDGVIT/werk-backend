@@ -6,6 +6,7 @@ const User = require('../models/user')
 const Session = require('../models/session')
 const Participant = require('../models/participant')
 const { generateQRCode } = require('../utils')
+const { deleteFile } = require('../utils/s3Utils')
 // const Task = require('../models/task')
 require('dotenv').config()
 
@@ -55,7 +56,7 @@ exports.createSession = async (req, res) => {
     await Participant.bulkCreate(participantsArray)
 
     result.forEach(async (p, i) => {
-      if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name)
+      if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location)
     })
 
     res.status(200).json({
@@ -87,18 +88,31 @@ exports.joinSession = async (req, res) => {
     if (!session.length) throw new BadRequest('No session is associated with the given accessCode')
 
     const participant = await Participant.findAll({
-      attributes: ['participantId', 'joined'],
+      attributes: ['participantId', 'joined', 'userId'],
       where: {
-        userId: req.user.userId,
         sId: session[0].sessionId
       }
     })
 
-    if (participant.length === 0) throw new Unauthorized('You have not been invited to this session')
-    if (participant[0].joined) throw new BadRequest('You have already joined this session')
+    const index = participant.findIndex(p => {
+      return p.userId === req.user.userId
+    })
+    if (index === -1) throw new Unauthorized('You have not been invited to this session')
+    if (participant[index].joined) throw new BadRequest('You have already joined this session')
 
-    participant[0].joined = true
-    await participant[0].save()
+    participant[index].joined = true
+    await participant[index].save()
+    // checking if all the participants joined
+    let check = true
+    participant.forEach(p => {
+      if (p.joined === false) {
+        check = false
+      }
+    })
+    if (check === true) {
+      await deleteFile(process.env.AWS_BUCKET, session[0].qrCode)
+    }
+
     res.status(200).json({
       session: session[0]
     })
