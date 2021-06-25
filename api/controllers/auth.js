@@ -176,7 +176,7 @@ exports.verifyEmail = async (req, res) => {
       }
     })
     if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
-    if (searchedUser[0].emailVerified) throw new BadRequest('EMAIL IS ALREADY REGISTERED!')
+    if (searchedUser[0].emailVerified) throw new BadRequest('EMAIL IS ALREADY VERIFIED')
 
     searchedUser[0].emailVerified = true
     await searchedUser[0].save()

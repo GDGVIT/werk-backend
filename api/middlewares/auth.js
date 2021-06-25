@@ -4,7 +4,7 @@ const User = require('../models/user')
 
 const authMiddleware = async (req, res, next) => {
   try {
-    if (!req.headers.authorization) throw new Unauthorized('PLEASE LOGIN! NO AUTH TOKEN ')
+    if (!req.headers.authorization) throw new Unauthorized('Login Required!')
 
     const token = req.headers.authorization.replace('Bearer ', '')
     const user = verifyToken(token)
@@ -16,8 +16,8 @@ const authMiddleware = async (req, res, next) => {
         userId: user.userId
       }
     })
-    if (!searchedUser.length) throw new Unauthorized('USER DOESN\'T EXIST! PLEASE REGISTER')
-    if (!searchedUser[0].emailVerified) throw new Unauthorized('USER\'S EMAIL IS NOT VERIFIED!')
+    if (!searchedUser.length) throw new Unauthorized('User is not registered!')
+    if (!searchedUser[0].emailVerified) throw new Unauthorized('EMail is not verified!')
 
     req.user = searchedUser[0]
     next()
