@@ -110,11 +110,10 @@ exports.login = async (req, res) => {
     })
     if (!searchedUser.length) throw new Unauthorized('Email is not registered with us!')
 
-    if (!searchedUser[0].emailVerified) throw new Unauthorized('Email is not verified!')
     const check = await verifyHash(password, searchedUser[0].password)
 
     if (!check) throw new Unauthorized('Password is incorrect!')
-
+    if (!searchedUser[0].emailVerified) throw new Unauthorized('Email is not verified!')
     const token = generateToken({
       userId: searchedUser[0].userId
     })
