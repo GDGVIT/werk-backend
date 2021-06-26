@@ -56,7 +56,7 @@ exports.createSession = async (req, res) => {
     await Participant.bulkCreate(participantsArray)
 
     result.forEach(async (p, i) => {
-      if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location)
+      if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location, name, description)
     })
 
     res.status(200).json({
