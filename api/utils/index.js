@@ -8,7 +8,7 @@ const admin = require('../../config/firebase')
 const { uploadFile } = require('./s3Utils')
 
 exports.generateToken = (user) => {
-  const token = jwt.sign({ ...user }, process.env.JWT_SECRET, { expiresIn: 86400 })
+  const token = jwt.sign({ ...user }, process.env.JWT_SECRET)
   return token
 }
 
