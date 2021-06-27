@@ -14,7 +14,7 @@ exports.createSession = async (req, res) => {
   try {
     // start and end time are in epoch format
     const { startTime, endTime, taskCreationByAll, taskAssignByAll, participants, name, description } = req.body
-    if (!name || !description || !startTime || !endTime || !taskCreationByAll || !taskAssignByAll || !participants.length) throw new BadRequest('All required fields are not provided')
+    if (!name || !description || !startTime || !endTime || taskCreationByAll === null || taskAssignByAll === null || !participants.length) throw new BadRequest('All required fields are not provided')
     const accessCode = crypto.randomBytes(5).toString('hex')
 
     const participantsFiltered = participants.filter(p => p !== req.user.email)
