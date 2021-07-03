@@ -87,6 +87,12 @@ exports.assignTask = async (req, res) => {
   }
 }
 
+/*
+Status can be changed to either started or paused
+In the req body, send 0: started and send 1: paused
+
+*/
+
 exports.changeStatus = async (req, res) => {
   try {
     const statusCodes = ['started', 'paused']
@@ -166,9 +172,9 @@ exports.taskTerminated = async (req, res) => {
     const task = await Task.findOne({ where: { taskId } })
 
     if (!task) throw new BadRequest('task doesn\'t exist')
-    if (task.status === 'terminated') throw new BadRequest('Task is already terminated!!')
+    if (task.status === 'terminated') throw new BadRequest('Task is already terminated')
     if (task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
-
+    if (task.status === 'completed') throw new BadRequest('Task is already completed')
     task.status = 'terminated'
 
     await task.save()
@@ -228,7 +234,7 @@ exports.taskShifted = async (req, res) => {
 
 exports.getTasks = async (req, res) => {
   try {
-    const { sessionId } = req.body
+    const sessionId = req.params.id
 
     if (!sessionId) { throw new BadRequest('Session Not provided') }
 
@@ -263,8 +269,6 @@ exports.getTasks = async (req, res) => {
       ]
     })
 
-    console.log(tasks)
-
     // for (let i = 0; i <= tasks.length - 1; i++) {
     //   tasks[i].assignedTo = await tasks[i].getUser({ attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
     //   tasks[i].createdBy = await User.findOne({ where: { userId: tasks[i].createdBy }, attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
@@ -282,7 +286,7 @@ exports.getTasks = async (req, res) => {
 
 exports.getTasksAssigned = async (req, res) => {
   try {
-    const { sessionId } = req.body
+    const sessionId = req.params.id
     if (!sessionId) { throw new BadRequest('Session Not provided') }
     const session = await Session.findOne({ where: { sessionId } })
     if (!session) throw new BadRequest('Session doesn\'t exist')
