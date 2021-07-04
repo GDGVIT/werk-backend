@@ -124,7 +124,7 @@ exports.login = async (req, res) => {
         name: searchedUser[0].name,
         email,
         avatar: searchedUser[0].avatar,
-        userId: searchedUser[0].id
+        userId: searchedUser[0].userId
       }
     })
   } catch (e) {
