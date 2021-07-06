@@ -7,6 +7,8 @@ router.get('/session/:id', authMiddleware, controllers.getTasks)
 
 router.get('/assigned/:id', authMiddleware, controllers.getTasksAssigned)
 
+router.get('/details/:id', authMiddleware, controllers.getTask)
+
 router.post('/create', authMiddleware, controllers.createTask)
 
 router.post('/:id/assign', authMiddleware, controllers.assignTask)

@@ -369,3 +369,25 @@ exports.getTasksAssigned = async (req, res) => {
     })
   }
 }
+
+exports.getTask = async (req, res) => {
+  try {
+    const taskId = req.params.id
+
+    if (!taskId) throw new BadRequest('Required details not provided')
+
+    let task = await Task.findOne({ where: { taskId } })
+
+    if (!task) throw new BadRequest('task doesn\'t exist')
+    if (task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
+
+    task.completedDuration += (new Date().getTime() - task.startedTime)
+    task = task.toJSON()
+    res.status(200).json({ ...task, ...changeDurationFormat(task.completionDuration) })
+  } catch (e) {
+    console.log(e)
+    res.status(e.status || 500).json({
+      error: e.status ? e.message : e.toString()
+    })
+  }
+}
