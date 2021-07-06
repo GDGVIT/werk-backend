@@ -140,9 +140,9 @@ exports.changeStatus = async (req, res) => {
 exports.taskCompleted = async (req, res) => {
   try {
     const taskId = req.params.id
-    const { completedDuration } = req.body
+    // const { completedDuration } = req.body
 
-    if (!taskId || !completedDuration) throw new BadRequest('Required details not provided')
+    if (!taskId) throw new BadRequest('Required details not provided')
 
     let task = await Task.findOne({ where: { taskId } })
 
@@ -381,7 +381,7 @@ exports.getTask = async (req, res) => {
     if (!task) throw new BadRequest('task doesn\'t exist')
     if (task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
 
-    task.completedDuration += (new Date().getTime() - task.startedTime)
+    task.completionDuration += (new Date().getTime() - task.startedTime)
     task = task.toJSON()
     res.status(200).json({ ...task, ...changeDurationFormat(task.completionDuration) })
   } catch (e) {

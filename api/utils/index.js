@@ -59,7 +59,7 @@ exports.generateQRCode = async (data) => {
 
 exports.changeDurationFormat = (time) => {
   let hours, mins, secs
-  if (time === 0) {
+  if (time === 0 || time === null) {
     hours = mins = secs = 0
   } else {
     time = Math.round(time / 1000)
