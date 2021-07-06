@@ -56,3 +56,19 @@ exports.generateQRCode = async (data) => {
   fs.unlinkSync(pathToFile)
   return awsResponse
 }
+
+exports.changeDurationFormat = (time) => {
+  let hours, mins, secs
+  if (time === 0) {
+    hours = mins = secs = 0
+  } else {
+    time = Math.round(time / 1000)
+    hours = Math.floor(time / 3600)
+    time = time - hours * 3600
+    mins = Math.floor(time / 60)
+    time = time - mins * 60
+    secs = time
+  }
+
+  return { elapsedHours: hours, elapsedMins: mins, elapsedSecs: secs }
+}
