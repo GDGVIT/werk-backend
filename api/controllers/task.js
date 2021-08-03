@@ -113,7 +113,7 @@ exports.changeStatus = async (req, res) => {
 
     if (task.status === statusCodes[statusCode]) throw new BadRequest('Task is already in ' + statusCodes[statusCode])
 
-    if (task.status === 'completed' || task.status === 'terminated') throw new BadRequest('You cannot change the status of a' + task.status + ' task')
+    if (task.status === 'completed' || task.status === 'terminated') throw new BadRequest('You cannot change the status of a ' + task.status + ' task')
 
     if (task.startedTime === -1 && statusCodes[statusCode] === 'paused') throw new BadRequest('Task did not start yet')
 
@@ -197,10 +197,11 @@ exports.taskTerminated = async (req, res) => {
     if (task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
     if (task.status === 'terminated') throw new BadRequest('Task is already terminated')
     if (task.status === 'completed') throw new BadRequest('Task is already completed')
-    if (task.status === 'started') task.completionDuration += (new Date().getTime - task.startedTime)
+    if (task.status === 'started') task.completionDuration += (new Date().getTime() - task.startedTime)
     task.status = 'terminated'
 
     await task.save()
+    console.log(task)
     task = task.toJSON()
     res.status(200).json({
       ...task, ...changeDurationFormat(task.completionDuration)
@@ -380,9 +381,8 @@ exports.getTask = async (req, res) => {
 
     if (!task) throw new BadRequest('task doesn\'t exist')
     if (task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
-
-    task.completionDuration += (new Date().getTime() - task.startedTime)
     task = task.toJSON()
+    if (task.status === 'started') task.completionDuration += (new Date().getTime() - task.startedTime)
     res.status(200).json({ ...task, ...changeDurationFormat(task.completionDuration) })
   } catch (e) {
     console.log(e)
