@@ -122,7 +122,7 @@ exports.changeStatus = async (req, res) => {
     if (statusCodes[statusCode] === 'paused') {
       task.completionDuration += (new Date().getTime() - task.startedTime)
     }
-    // console.log(task.startedTime, task.completedDuration)
+
     task.status = statusCodes[statusCode]
     await task.save()
     task = task.toJSON()
@@ -201,7 +201,6 @@ exports.taskTerminated = async (req, res) => {
     task.status = 'terminated'
 
     await task.save()
-    console.log(task)
     task = task.toJSON()
     res.status(200).json({
       ...task, ...changeDurationFormat(task.completionDuration)
@@ -302,7 +301,6 @@ exports.getTasks = async (req, res) => {
       if (tasks[x].status === 'started') tasks[x].completionDuration += (new Date().getTime() - tasks[x].startedTime)
       tasks[x] = { ...tasks[x], ...changeDurationFormat(tasks[x].completionDuration) }
     }
-    // console.log(tasks)
     // for (let i = 0; i <= tasks.length - 1; i++) {
     //   tasks[i].assignedTo = await tasks[i].getUser({ attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
     //   tasks[i].createdBy = await User.findOne({ where: { userId: tasks[i].createdBy }, attributes: { exclude: ['password', 'otp', 'otpExpiry', 'emailVerified'] } })
