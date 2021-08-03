@@ -21,10 +21,11 @@ exports.googleAuth = async (req, res) => {
       }
     })
     if (!searchedUser) {
+      console.log(user)
       const result = await User.create({
         name: user.displayName || '',
         email: user.email,
-        avatar: user.photoURL || process.envv.DEFAULT_AVATAR,
+        avatar: user.photoURL || process.env.DEFAULT_AVATAR,
         emailVerified: true
       })
       searchedUser = result
