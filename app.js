@@ -98,8 +98,8 @@ sequelize.sync({
             return
           }
           console.log('initialized')
-          userId = verifyToken(data.token)
-          user = await User.findAll({
+          userId = verifyToken(data.token).userId
+          user = await User.findOne({
             where: {
               userId
             },
@@ -107,21 +107,31 @@ sequelize.sync({
               exclude: ['password', 'emailVerified', 'otpExpiry', 'otp']
             }
           })
+          // socket.emit('initialized')
         } else console.log('already intialized!!')
       })
 
       // MESSAGE SENT!
       socket.on('message', async (messageData) => {
-        if (!user) { console.log('USER IS NOT AUTHENTICATED!'); return }
-        if (!session) { console.log('USER DINDT JOIN ANY SESSION YET'); return }
+        if (!user) { console.log('Uset is not authenticated'); return }
+        if (!session) { console.log('User did not join any session yet'); return }
         if (messageData.message) {
           const date = new Date()
           socket.to(currentRoom).emit('message', {
             ...messageData,
             sentBy: {
-              userId: user[0].userId,
-              avatar: user[0].avatar,
-              name: user[0].name
+              userId: user.userId,
+              avatar: user.avatar,
+              name: user.name
+            },
+            sentTime: date.getTime()
+          })
+          console.log({
+            ...messageData,
+            sentBy: {
+              userId: user.userId,
+              avatar: user.avatar,
+              name: user.name
             },
             sentTime: date.getTime()
           })
@@ -132,6 +142,7 @@ sequelize.sync({
             sentIn: session,
             sentTime: date.getTime()
           })
+          // socket.emit('messageSent')
         } else {
           console.log('nothing is sent in the message Data!')
         }
@@ -148,7 +159,7 @@ sequelize.sync({
           console.log('session ID not passed', 'user: ' + user)
           return
         }
-
+        console.log(user.userId)
         session = data.session
         const participant = await Participant.findAll({
           where: {
@@ -162,9 +173,10 @@ sequelize.sync({
           console.log('user is not in the session')
           return
         }
-        const currentRoom = `session-${session}`
+        currentRoom = `session-${session}`
         socket.join(currentRoom)
         console.log('joined room: ' + currentRoom)
+        // socket.emit('joinedSession')
       })
 
       // leave a session
@@ -177,6 +189,7 @@ sequelize.sync({
         currentRoom = null
         session = null
         console.log('user left the session')
+        // socket.emit('leftSession')
       })
     })
   }).catch(e => {

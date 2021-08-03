@@ -4,15 +4,12 @@ require('dotenv').config()
 
 exports.sendVerificationLink = async (user) => {
   const accessCode = crypto.randomBytes(5).toString('hex')
-
+  const link = `${process.env.TESTING ? process.env.LOCAL_URL : process.env.URL}/auth/verify/${accessCode}`
   const mailOptions = {
     from: process.env.WERK_EMAIL,
     to: user.email,
     subject: 'VERIFICATION MAIL',
-    html: `<body>
-        <p>Thank you for registering at WERK!</p>
-      <p>Please click <a href="${process.env.TESTING ? process.env.LOCAL_URL : process.env.URL}/auth/verify/${accessCode}">here</a> to verify your email</p>
-    </body>`
+    html: emailVerificationTemplate({ userName: user.name, link })
   }
 
   user.verificationCode = accessCode
@@ -21,15 +18,12 @@ exports.sendVerificationLink = async (user) => {
   return sendEmail(mailOptions)
 }
 
-exports.sendAccessCode = async (accessCode, email, sender, location) => {
+exports.sendAccessCode = async (accessCode, email, sender, location, sessionName, sessionDesc) => {
   const mailOptions = {
     from: process.env.WERK_EMAIL,
     to: email,
-    subject: 'Access code for the sessions',
-    html: `<p>${sender.toUpperCase()} has invited you to join a session in werk app. </p>
-          <p>Please use this accessCode: ${accessCode} for joining the session </p>
-          <p>You can also scan the following qr code from our app, to join the session.</p>
-          <img src="${location}" alt="img" width="200" height="200"/>`
+    subject: 'Invite to join a session of Werk',
+    html: sendAccessCodeTemplate({ userName: sender, name: sessionName, desc: sessionDesc, code: accessCode, location })
   }
 
   return sendEmail(mailOptions)
@@ -39,13 +33,12 @@ exports.passwordResetCode = async (code, email, user) => {
   user.otpExpiry = new Date().getTime() + 20 * 60 * 1000
   user.otp = code
   await user.save()
-
+  const link = `${process.env.TESTING ? process.env.LOCAL_URL : process.env.URL}/auth/changePassword/${code}`
   const mailOptions = {
     from: process.env.WERK_EMAIL,
     to: email,
-    subject: 'Password Rest Code',
-    html: `<p>You can reset the password by clicking on this link : <a href="${process.env.TESTING ? process.env.LOCAL_URL : process.env.URL}/auth/changePassword/${code}">RESET PASSWORD</a></p>
-          <p> This link is valid only for 20 minutes!</p>`
+    subject: 'Reset the password of Werk Account',
+    html: passwordRestCodeTemplate({ link, userName: user.name })
   }
 
   return sendEmail(mailOptions)
@@ -61,6 +54,74 @@ const sendEmail = async (mailOptions) => {
       }
     })
   })
+}
+const emailVerificationTemplate = (data) => {
+  return `<html>
+  <body>
+  <div style="text-align: center;">
+    <a href="https://github.com/GDGVIT/werk-backend" ><img src="https://user-images.githubusercontent.com/30529572/92081025-fabe6f00-edb1-11ea-9169-4a8a61a5dd45.png" width="400" height="100"></a>
+  </div>
+  <div style="margin-left: 15px;">
+      <p>Hola! <strong style="text-transform:capitalize;">${data.userName}</strong>, it's delightful to see you register at <em>Werk</em>.</p>
+      <p>Please click <a style="text-decoration: none;" href="${data.link}">here</a> to verify your email</p>
+      <br>
+      <br>
+      <br>
+      <div>
+      Thank you
+      </div>
+      <div>
+        Werk Backend Team
+      </div>
+  </div>
+  </body>
+</html>`
+}
+const passwordRestCodeTemplate = (data) => {
+  return `<html>
+  <body>
+  <div style="text-align: center;">
+    <a href="https://github.com/GDGVIT/werk-backend" ><img src="https://user-images.githubusercontent.com/30529572/92081025-fabe6f00-edb1-11ea-9169-4a8a61a5dd45.png" width="400" height="100"></a>
+  </div>
+  <div style="margin-left: 15px;">
+      <p>Hola! <strong style="text-transform:capitalize;">${data.userName}</strong>, you can reset the password by clicking on this link:  <a style="text-decoration: none;" href="${data.link}">Reset Password</a></p>
+      <p>Do it quickly! This link is valid for 20 minutes only.</p>
+      <br>
+      <br>
+      <br>
+      <div>
+      Thank you
+      </div>
+      <div>
+        Werk Backend Team
+      </div>
+  </div>
+  </body>
+</html>`
+}
+const sendAccessCodeTemplate = (data) => {
+  return `
+  <html>
+    <body>
+    <div style="text-align: center;">
+      <a href="https://github.com/GDGVIT/werk-backend" ><img src="https://user-images.githubusercontent.com/30529572/92081025-fabe6f00-edb1-11ea-9169-4a8a61a5dd45.png" width="400" height="100"></a>
+    </div>
+    <div style="margin-left: 15px;">
+        <p>Hola! <strong style="text-transform:capitalize;">${data.userName}</strong> has invited you to the session <strong>${data.name}</strong>. ${data.desc.length > 0 ? 'The description of the session is "' + data.desc + '"' : ''}</p>
+        <p>You can join the session by entering the access code: <strong>${data.code}</strong> in the Werk App. You can also join the session by scanning the given QRCode in the Werk app.</p>
+        <div style="text-align:center"> <img  src="${data.location}" alt="img" width="200" height="200"/></div>
+        <br>
+        <br>
+        <br>
+      <div>
+      Thank you
+      </div>
+      <div>
+        Werk Backend Team
+      </div>
+    </div>
+    </body>
+  </html>`
 }
 
 // exports.sendVerificationLink = async (accessCode, email, sender) => {

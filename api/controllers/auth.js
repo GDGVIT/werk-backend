@@ -21,10 +21,11 @@ exports.googleAuth = async (req, res) => {
       }
     })
     if (!searchedUser) {
+      console.log(user)
       const result = await User.create({
         name: user.displayName || '',
         email: user.email,
-        avatar: user.photoURL || process.envv.DEFAULT_AVATAR,
+        avatar: user.photoURL || process.env.DEFAULT_AVATAR,
         emailVerified: true
       })
       searchedUser = result
@@ -124,7 +125,7 @@ exports.login = async (req, res) => {
         name: searchedUser[0].name,
         email,
         avatar: searchedUser[0].avatar,
-        userId: searchedUser[0].id
+        userId: searchedUser[0].userId
       }
     })
   } catch (e) {

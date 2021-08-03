@@ -25,9 +25,14 @@ const Task = sequelize.define('task', {
   },
   // in mins
   completionDuration: {
-    type: Sequelize.INTEGER
+    type: Sequelize.INTEGER,
+    defaultValue: 0
   },
+  startedTime: {
+    type: Sequelize.BIGINT,
+    defaultValue: -1
 
+  },
   // completedDate in epoch time
   submittedDate: {
     type: Sequelize.BIGINT
