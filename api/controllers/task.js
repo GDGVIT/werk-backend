@@ -378,7 +378,7 @@ exports.getTask = async (req, res) => {
     let task = await Task.findOne({ where: { taskId } })
 
     if (!task) throw new BadRequest('task doesn\'t exist')
-    if (task.assignedTo && task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
+    // if (task.assignedTo && task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
     task = task.toJSON()
     if (task.status === 'started') task.completionDuration += (new Date().getTime() - task.startedTime)
     res.status(200).json({ ...task, ...changeDurationFormat(task.completionDuration) })
