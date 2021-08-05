@@ -16,11 +16,8 @@ exports.createSession = async (req, res) => {
     const { startTime, endTime, taskCreationByAll, taskAssignByAll, participants, name, description } = req.body
     if (!name || !description || !startTime || !endTime || taskCreationByAll === null || taskAssignByAll === null || !participants.length) throw new BadRequest('All required fields are not provided')
     if (startTime >= endTime) throw new BadRequest('End Time cannot be less than or equal to the start time')
-    const extraTime = (new Date().getTime() + (330 * 60 * 60))
-    if (startTime < extraTime || endTime < extraTime) {
-      console.log(startTime, extraTime)
-      throw new BadRequest('Choose only future time and date')
-    }
+    if (startTime < new Date().getTime() || endTime < new Date().getTime()) throw new BadRequest('Choose only future time and date')
+
     // if (new Date().getTime() > startTime || new Date().getTime() > endTime) throw new BadRequest('Provided timings are not valid!')
 
     const accessCode = crypto.randomBytes(5).toString('hex')
