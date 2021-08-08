@@ -7,6 +7,7 @@ const Session = require('../models/session')
 const Participant = require('../models/participant')
 const { generateQRCode } = require('../utils')
 const { deleteFile } = require('../utils/s3Utils')
+
 // const Task = require('../models/task')
 require('dotenv').config()
 
@@ -27,12 +28,30 @@ exports.createSession = async (req, res) => {
     if (!participantsFiltered.length) throw new BadRequest('Don\'t give your own email while creation of session')
 
     const result = await User.findAll({
-      attributes: ['userId', 'email'],
+      attributes: ['userId', 'email', 'registered'],
       where: {
         email: participantsFiltered
       }
     })
-    if (!result.length) throw new BadRequest('Provided emails are not registered with any of our user')
+    // if (!result.length) throw new BadRequest('Provided emails are not registered with any of our user')
+    const newParticipants = []
+    let check
+    for (const x of participantsFiltered) {
+      check = 0
+      for (const y of result) {
+        if (x === y.email) check = 1
+      }
+      if (!check) {
+        newParticipants.push({
+          name: 'Guest@' + crypto.randomBytes(2).toString('hex'),
+          email: x,
+          registered: false
+        })
+      }
+    }
+
+    result.push(...await User.bulkCreate(newParticipants))
+    console.log(result)
 
     const data = await generateQRCode(accessCode)
 
@@ -61,7 +80,7 @@ exports.createSession = async (req, res) => {
     await Participant.bulkCreate(participantsArray)
 
     result.forEach(async (p, i) => {
-      if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location, name, description)
+      if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location, name, description, p.registered)
     })
 
     res.status(200).json({
@@ -114,6 +133,7 @@ exports.joinSession = async (req, res) => {
         check = false
       }
     })
+    // after the last person entered the session! Delete the qr code file!
     if (check === true) {
       await deleteFile(process.env.AWS_BUCKET, session[0].qrCode)
     }
@@ -166,6 +186,7 @@ exports.getSessions = async (req, res) => {
 exports.getParticipants = async (req, res) => {
   try {
     const session = await Session.findByPk(req.params.id)
+    if (!session) throw new BadRequest('Session doesn\'t exist')
     const participants = await session.getUsers()
     let users = participants.map(p => {
       return {

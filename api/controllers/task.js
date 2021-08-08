@@ -15,8 +15,8 @@ exports.createTask = async (req, res) => {
 
     const session = await Session.findOne({ where: { sessionId } })
 
-    if ((new Date().getTime() + (330 * 60 * 60) > session.endTime)) throw new BadRequest('Session is completed!')
-    if ((new Date().getTime() + (330 * 60 * 60) < session.startTime)) throw new BadRequest('Session has not started yet!')
+    // if ((new Date().getTime() + (330 * 60 * 60) > session.endTime)) throw new BadRequest('Session is completed!')
+    // if ((new Date().getTime() + (330 * 60 * 60) < session.startTime)) throw new BadRequest('Session has not started yet!')
 
     if (!session) throw new BadRequest('Session doesn\'t exist')
 
