@@ -17,7 +17,7 @@ const authMiddleware = async (req, res, next) => {
       }
     })
     if (!searchedUser.length) throw new Unauthorized('User is not registered!')
-    if (!searchedUser[0].emailVerified) throw new Unauthorized('EMail is not verified!')
+    if (!searchedUser[0].emailVerified) throw new Unauthorized('Email is not verified!')
 
     req.user = searchedUser[0]
     next()

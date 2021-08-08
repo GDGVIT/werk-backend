@@ -217,3 +217,84 @@ exports.getParticipants = async (req, res) => {
     })
   }
 }
+
+// exports.addParticipants = async (req, res) => {
+//   try {
+//     // start and end time are in epoch format
+//     const { participants } = req.body
+//     const sid = req.params.id
+//     if (!participants.length) throw new BadRequest('All required fields are not provided')
+
+//     const session = await Session.findByPk(sid)
+
+//     if (!session) throw new BadRequest('Session doesn\'t exist')
+
+//     const participantsFiltered = participants.filter(p => p !== req.user.email)
+
+//     if (!participantsFiltered.length) throw new BadRequest('Don\'t give your own email while creation of session')
+
+//     const result = await User.findAll({
+//       attributes: ['userId', 'email', 'registered'],
+//       where: {
+//         email: participantsFiltered
+//       }
+//     })
+//     const newParticipants = []
+//     let check
+//     for (const x of participantsFiltered) {
+//       check = 0
+//       for (const y of result) {
+//         if (x === y.email) check = 1
+//       }
+//       if (!check) {
+//         newParticipants.push({
+//           name: 'Guest@' + crypto.randomBytes(2).toString('hex'),
+//           email: x,
+//           registered: false
+//         })
+//       }
+//     }
+
+//     result.push(...await User.bulkCreate(newParticipants))
+//     console.log(result)
+
+//     const data = await generateQRCode(session.accessCode)
+
+//     // const session = await Session.create({
+//     //   sessionName: name,
+//     //   sessionDescription: description,
+//     //   startTime,
+//     //   endTime,
+//     //   createdBy: req.user.userId,
+//     //   taskCreationUniv: taskCreationByAll,
+//     //   taskAssignUniv: taskAssignByAll,
+//     //   accessCode,
+//     //   qrCode: data.Location
+//     // })
+
+//     result.splice(0, 0, req.user)
+//     const participantsArray = []
+//     result.forEach(async (p, i) => {
+//       participantsArray.push({
+//         sId: session.sessionId,
+//         userId: p.userId,
+//         joined: i === 0
+//       })
+//     })
+
+//     await Participant.bulkCreate(participantsArray)
+
+//     result.forEach(async (p, i) => {
+//       if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location, name, description, p.registered)
+//     })
+
+//     res.status(200).json({
+//       session: { ...session.dataValues }
+//     })
+//   } catch (e) {
+//     console.log(e)
+//     res.status(e.status || 500).json({
+//       error: e.status ? e.message : e.toString()
+//     })
+//   }
+// }
