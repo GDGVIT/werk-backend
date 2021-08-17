@@ -7,6 +7,7 @@ const Session = require('../models/session')
 const Participant = require('../models/participant')
 const { generateQRCode } = require('../utils')
 const { deleteFile } = require('../utils/s3Utils')
+
 // const Task = require('../models/task')
 require('dotenv').config()
 
@@ -15,6 +16,11 @@ exports.createSession = async (req, res) => {
     // start and end time are in epoch format
     const { startTime, endTime, taskCreationByAll, taskAssignByAll, participants, name, description } = req.body
     if (!name || !description || !startTime || !endTime || taskCreationByAll === null || taskAssignByAll === null || !participants.length) throw new BadRequest('All required fields are not provided')
+    if (startTime >= endTime) throw new BadRequest('End Time cannot be less than or equal to the start time')
+    if (startTime < new Date().getTime() || endTime < new Date().getTime()) throw new BadRequest('Choose only future time and date')
+
+    // if (new Date().getTime() > startTime || new Date().getTime() > endTime) throw new BadRequest('Provided timings are not valid!')
+
     const accessCode = crypto.randomBytes(5).toString('hex')
 
     const participantsFiltered = participants.filter(p => p !== req.user.email)
@@ -22,12 +28,30 @@ exports.createSession = async (req, res) => {
     if (!participantsFiltered.length) throw new BadRequest('Don\'t give your own email while creation of session')
 
     const result = await User.findAll({
-      attributes: ['userId', 'email'],
+      attributes: ['userId', 'email', 'registered'],
       where: {
         email: participantsFiltered
       }
     })
-    if (!result.length) throw new BadRequest('Provided emails are not registered with any of our user')
+    // if (!result.length) throw new BadRequest('Provided emails are not registered with any of our user')
+    const newParticipants = []
+    let check
+    for (const x of participantsFiltered) {
+      check = 0
+      for (const y of result) {
+        if (x === y.email) check = 1
+      }
+      if (!check) {
+        newParticipants.push({
+          name: 'Guest@' + crypto.randomBytes(2).toString('hex'),
+          email: x,
+          registered: false
+        })
+      }
+    }
+
+    result.push(...await User.bulkCreate(newParticipants))
+    console.log(result)
 
     const data = await generateQRCode(accessCode)
 
@@ -56,7 +80,7 @@ exports.createSession = async (req, res) => {
     await Participant.bulkCreate(participantsArray)
 
     result.forEach(async (p, i) => {
-      if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location, name, description)
+      if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location, name, description, p.registered)
     })
 
     res.status(200).json({
@@ -109,6 +133,7 @@ exports.joinSession = async (req, res) => {
         check = false
       }
     })
+    // after the last person entered the session! Delete the qr code file!
     if (check === true) {
       await deleteFile(process.env.AWS_BUCKET, session[0].qrCode)
     }
@@ -161,6 +186,7 @@ exports.getSessions = async (req, res) => {
 exports.getParticipants = async (req, res) => {
   try {
     const session = await Session.findByPk(req.params.id)
+    if (!session) throw new BadRequest('Session doesn\'t exist')
     const participants = await session.getUsers()
     let users = participants.map(p => {
       return {
@@ -191,3 +217,84 @@ exports.getParticipants = async (req, res) => {
     })
   }
 }
+
+// exports.addParticipants = async (req, res) => {
+//   try {
+//     // start and end time are in epoch format
+//     const { participants } = req.body
+//     const sid = req.params.id
+//     if (!participants.length) throw new BadRequest('All required fields are not provided')
+
+//     const session = await Session.findByPk(sid)
+
+//     if (!session) throw new BadRequest('Session doesn\'t exist')
+
+//     const participantsFiltered = participants.filter(p => p !== req.user.email)
+
+//     if (!participantsFiltered.length) throw new BadRequest('Don\'t give your own email while creation of session')
+
+//     const result = await User.findAll({
+//       attributes: ['userId', 'email', 'registered'],
+//       where: {
+//         email: participantsFiltered
+//       }
+//     })
+//     const newParticipants = []
+//     let check
+//     for (const x of participantsFiltered) {
+//       check = 0
+//       for (const y of result) {
+//         if (x === y.email) check = 1
+//       }
+//       if (!check) {
+//         newParticipants.push({
+//           name: 'Guest@' + crypto.randomBytes(2).toString('hex'),
+//           email: x,
+//           registered: false
+//         })
+//       }
+//     }
+
+//     result.push(...await User.bulkCreate(newParticipants))
+//     console.log(result)
+
+//     const data = await generateQRCode(session.accessCode)
+
+//     // const session = await Session.create({
+//     //   sessionName: name,
+//     //   sessionDescription: description,
+//     //   startTime,
+//     //   endTime,
+//     //   createdBy: req.user.userId,
+//     //   taskCreationUniv: taskCreationByAll,
+//     //   taskAssignUniv: taskAssignByAll,
+//     //   accessCode,
+//     //   qrCode: data.Location
+//     // })
+
+//     result.splice(0, 0, req.user)
+//     const participantsArray = []
+//     result.forEach(async (p, i) => {
+//       participantsArray.push({
+//         sId: session.sessionId,
+//         userId: p.userId,
+//         joined: i === 0
+//       })
+//     })
+
+//     await Participant.bulkCreate(participantsArray)
+
+//     result.forEach(async (p, i) => {
+//       if (i !== 0) await sendAccessCode(accessCode, p.email, req.user.name, data.Location, name, description, p.registered)
+//     })
+
+//     res.status(200).json({
+//       session: { ...session.dataValues }
+//     })
+//   } catch (e) {
+//     console.log(e)
+//     res.status(e.status || 500).json({
+//       error: e.status ? e.message : e.toString()
+//     })
+//   }
+// }

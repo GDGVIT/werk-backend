@@ -21,7 +21,7 @@ exports.googleAuth = async (req, res) => {
       }
     })
     if (!searchedUser) {
-      console.log(user)
+      // console.log(user)
       const result = await User.create({
         name: user.displayName || '',
         email: user.email,
@@ -29,6 +29,12 @@ exports.googleAuth = async (req, res) => {
         emailVerified: true
       })
       searchedUser = result
+    } else if (!searchedUser.registered) {
+      searchedUser.name = user.displayName || ''
+      searchedUser.avatar = user.photoURL || process.env.DEFAULT_AVATAR
+      searchedUser.emailVerified = true
+      searchedUser.registered = true
+      await searchedUser.save()
     }
     const token = generateToken({
       userId: searchedUser.userId
@@ -63,7 +69,7 @@ exports.register = async (req, res) => {
       }
     })
 
-    if (searchedUser.length) { throw new BadRequest('Email is already registered!') }
+    if (searchedUser.length && searchedUser[0].registered) { throw new BadRequest('Email is already registered!') }
 
     const hashedPassword = await hashIt(password)
 
@@ -71,11 +77,20 @@ exports.register = async (req, res) => {
 
     if (password.length < 5) throw new BadRequest('Password must have more than 5 chars')
 
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword
-    })
+    let user
+    if (!searchedUser.length) {
+      user = await User.create({
+        name,
+        email,
+        password: hashedPassword
+      })
+    } else if (!searchedUser.registered) {
+      searchedUser[0].name = name
+      searchedUser[0].registered = true
+      searchedUser[0].password = hashedPassword
+      await searchedUser[0].save()
+      user = searchedUser[0]
+    }
 
     const token = generateToken({
       userId: user.userId
@@ -106,7 +121,8 @@ exports.login = async (req, res) => {
     if (!email || !password) throw new BadRequest('Required data is not provided')
     const searchedUser = await User.findAll({
       where: {
-        email: email
+        email: email,
+        registered: true
       }
     })
     if (!searchedUser.length) throw new Unauthorized('Email is not registered with us!')
@@ -147,7 +163,8 @@ exports.sendEmail = async (req, res) => {
         exclude: ['password']
       },
       where: {
-        email: email
+        email: email,
+        registered: true
       }
     })
     if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
@@ -173,7 +190,8 @@ exports.verifyEmail = async (req, res) => {
         exclude: ['password']
       },
       where: {
-        verificationCode
+        verificationCode,
+        registered: true
       }
     })
     if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
@@ -199,7 +217,8 @@ exports.sendResetPasswordLink = async (req, res) => {
         exclude: ['password']
       },
       where: {
-        email: email
+        email: email,
+        registered: true
       }
     })
     if (!searchedUser.length) throw new BadRequest('Email is not registered with us!')
@@ -250,7 +269,8 @@ exports.changePassword = async (req, res) => {
         exclude: ['password']
       },
       where: {
-        userId
+        userId,
+        registered: true
       }
     })
     if (!searchedUser.length) throw new BadRequest('Invalid User')

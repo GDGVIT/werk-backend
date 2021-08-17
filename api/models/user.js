@@ -38,6 +38,10 @@ const User = sequelize.define('user', {
   },
   verificationCode: {
     type: Sequelize.STRING
+  },
+  registered: {
+    type: Sequelize.BOOLEAN,
+    defaultValue: true
   }
 }, {
   timestamps: true

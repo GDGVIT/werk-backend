@@ -14,6 +14,10 @@ exports.createTask = async (req, res) => {
     if (!description || !title || !expectedDuration || !points || !sessionId) { throw new BadRequest('All required fields are not provided') }
 
     const session = await Session.findOne({ where: { sessionId } })
+
+    // if ((new Date().getTime() + (330 * 60 * 60) > session.endTime)) throw new BadRequest('Session is completed!')
+    // if ((new Date().getTime() + (330 * 60 * 60) < session.startTime)) throw new BadRequest('Session has not started yet!')
+
     if (!session) throw new BadRequest('Session doesn\'t exist')
 
     if (!session.taskCreationUniv && req.user.userId !== session.createdBy) { throw new BadRequest('Task can be created only by the session owner') }
@@ -60,7 +64,7 @@ exports.assignTask = async (req, res) => {
     if (!task) throw new BadRequest('task doesn\'t exist')
 
     if (task.assignedTo != null) throw new BadRequest('task is already assigned!')
-    if (!task.session.taskAssignUniv && req.user.userId !== task.session.createdBy) { throw new BadRequest('Only Session owner can assign the tasks!!') }
+    if (!task.session.taskAssignUniv && req.user.userId !== task.session.createdBy) { throw new BadRequest('Session creator can only assign the tasks') }
 
     const user = await User.findOne({ where: { userId } })
     if (!user) throw new BadRequest('Invalid User Id')
@@ -223,12 +227,13 @@ exports.taskShifted = async (req, res) => {
     const task = await Task.findOne({ where: { taskId }, include: { model: Session } })
     if (!task) throw new BadRequest('task doesn\'t exist')
 
-    if (!task.submittedDate && task.status === 'completed') { throw new BadRequest('Task is already completed!') }
+    if (task.status === 'completed') { throw new BadRequest('Task is already completed!') }
 
-    // if(task.status=='terminated')
+    if (task.status === 'terminated') throw new BadRequest('task is already terminated')
 
     // ONLY TASK CREATOR AND SESSION CREATOR HAS THE POWER TO REASSIGN THE TASK TO SOMEONE ELSE!
-    if (!task.session.taskAssignUniv && req.user.userId !== task.session.createdBy && task.createdBy !== req.user.userId) { throw new BadRequest('You don\'t have the permission to assign this task to other person') }
+    if (!task.session.taskAssignUniv && req.user.userId !== task.session.createdBy) throw new BadRequest('Tasks can be assigned only by the session creator!')
+    // if (task.session.taskAssignUniv && req.user.userId !== task.createdBy && req.user.userId !== task.session.createdBy) { throw new BadRequest('Task creator and session creator can assign the task') }
 
     const user = await User.findOne({ where: { userId } })
     if (!user) throw BadRequest('Invalid User Id')
@@ -378,7 +383,7 @@ exports.getTask = async (req, res) => {
     let task = await Task.findOne({ where: { taskId } })
 
     if (!task) throw new BadRequest('task doesn\'t exist')
-    if (task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
+    // if (task.assignedTo && task.assignedTo !== req.user.userId) throw new BadRequest('This task is not assigned to you')
     task = task.toJSON()
     if (task.status === 'started') task.completionDuration += (new Date().getTime() - task.startedTime)
     res.status(200).json({ ...task, ...changeDurationFormat(task.completionDuration) })

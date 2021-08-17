@@ -18,12 +18,12 @@ exports.sendVerificationLink = async (user) => {
   return sendEmail(mailOptions)
 }
 
-exports.sendAccessCode = async (accessCode, email, sender, location, sessionName, sessionDesc) => {
+exports.sendAccessCode = async (accessCode, email, sender, location, sessionName, sessionDesc, registered) => {
   const mailOptions = {
     from: process.env.WERK_EMAIL,
     to: email,
     subject: 'Invite to join a session of Werk',
-    html: sendAccessCodeTemplate({ userName: sender, name: sessionName, desc: sessionDesc, code: accessCode, location })
+    html: sendAccessCodeTemplate({ userName: sender, name: sessionName, desc: sessionDesc, code: accessCode, location, registered })
   }
 
   return sendEmail(mailOptions)
@@ -107,7 +107,9 @@ const sendAccessCodeTemplate = (data) => {
       <a href="https://github.com/GDGVIT/werk-backend" ><img src="https://user-images.githubusercontent.com/30529572/92081025-fabe6f00-edb1-11ea-9169-4a8a61a5dd45.png" width="400" height="100"></a>
     </div>
     <div style="margin-left: 15px;">
-        <p>Hola! <strong style="text-transform:capitalize;">${data.userName}</strong> has invited you to the session <strong>${data.name}</strong>. ${data.desc.length > 0 ? 'The description of the session is "' + data.desc + '"' : ''}</p>
+        ${data.registered === true
+              ? ` <p>Hola! <strong style="text-transform:capitalize;">${data.userName}</strong> has invited you to the session <strong>${data.name}</strong>. ${data.desc.length > 0 ? 'The description of the session is "' + data.desc + '"' : ''}</p>`
+              : ` <p>Hola! Werk is a productivity app. Your friend <strong style="text-transform:capitalize;">${data.userName}</strong> has invited to the session </p> <strong>${data.name}</strong> in the app. ${data.desc.length > 0 ? 'The description of the session is ' + data.desc + '.' : ''}`}
         <p>You can join the session by entering the access code: <strong>${data.code}</strong> in the Werk App. You can also join the session by scanning the given QRCode in the Werk app.</p>
         <div style="text-align:center"> <img  src="${data.location}" alt="img" width="200" height="200"/></div>
         <br>
