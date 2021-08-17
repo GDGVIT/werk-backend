@@ -3,7 +3,7 @@
 	<img src="https://user-images.githubusercontent.com/30529572/92081025-fabe6f00-edb1-11ea-9169-4a8a61a5dd45.png" alt="DSC VIT"/>
 </a>
 	<h2 align="center"> WERK BACKEND </h2>
-	<h4 align="center"> < Insert Project Description Here > <h4>
+	<h4 align="center"> It is a RESTful Backend API for the Werk App. <h4>
 </p>
 
 ---
